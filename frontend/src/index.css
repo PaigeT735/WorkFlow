@@ -656,8 +656,8 @@ a.repo-link:hover { color: var(--text); }
   align-items: baseline;
 }
 .lane-order { font-size: 11px; color: var(--text-4); }
-.lane-title { font-size: 14.5px; font-weight: 600; color: var(--text-2); }
-.lane-caption { grid-column: 2; font-size: 12px; line-height: 1.4; color: var(--text-4); }
+.lane-title { font-size: 14.5px; font-weight: 600; color: var(--text); }
+.lane-caption { grid-column: 2; font-size: 12px; line-height: 1.4; color: var(--text-3); }
 .lane-empty {
   position: absolute;
   top: 0;
@@ -723,7 +723,7 @@ a.repo-link:hover { color: var(--text); }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
-  color: var(--text-4);
+  color: var(--text-3);
 }
 
 .mnode-child { gap: 9px; padding: 0 10px 0 9px; border-radius: 9px; background: var(--surface-3); }
@@ -898,7 +898,7 @@ a.repo-link:hover { color: var(--text); }
   right: 20px;
   margin: 0;
   font-size: 12px;
-  color: var(--text-4);
+  color: var(--text-3);
   pointer-events: none;
   z-index: 5;
 }
@@ -1109,7 +1109,7 @@ button.insp-file:hover { border-color: var(--line-3); color: var(--text-2); }
   text-align: left;
 }
 .rel-row:hover { background: var(--surface-3); }
-.rel-verb { flex: none; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px var(--font-mono); color: var(--text-4); }
+.rel-verb { flex: none; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px var(--font-mono); color: var(--text-3); }
 .rel-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rel-label.mono { font-size: 12.5px; }
 
@@ -1159,7 +1159,7 @@ button.insp-file:hover { border-color: var(--line-3); color: var(--text-2); }
 }
 .trace-item:hover { background: var(--surface-3); }
 .trace-item.is-focus { background: var(--accent-soft); }
-.trace-verb { font: 10.5px var(--font-mono); color: var(--text-4); }
+.trace-verb { font: 10.5px var(--font-mono); color: var(--text-3); }
 .trace-label { display: flex; align-items: center; gap: 7px; min-width: 0; max-width: 100%; }
 .trace-label > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-label .mono { font-size: 12.5px; }
