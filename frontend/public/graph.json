@@ -1,0 +1,2050 @@
+{
+  "schemaVersion": 1,
+  "id": "harbor",
+  "name": "Harbor",
+  "nodes": [
+    {
+      "id": "page-landing",
+      "type": "page",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Landing",
+      "summary": "/",
+      "detail": "Public marketing page. Get started goes to Login. View pricing goes to Checkout.",
+      "source": {
+        "file": "src/pages/Landing.tsx",
+        "startLine": 1,
+        "endLine": 11
+      },
+      "metadata": {
+        "route": "/",
+        "authRequired": false
+      }
+    },
+    {
+      "id": "comp-hero",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-landing",
+      "label": "Hero",
+      "detail": "The landing headline and short description of Harbor.",
+      "source": {
+        "file": "src/pages/Landing.tsx",
+        "startLine": 13,
+        "endLine": 20
+      }
+    },
+    {
+      "id": "ix-get-started",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-landing",
+      "label": "Get started",
+      "detail": "Sends a new visitor to the login page.",
+      "source": {
+        "file": "src/pages/Landing.tsx",
+        "startLine": 22,
+        "endLine": 24
+      }
+    },
+    {
+      "id": "ix-pricing",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-landing",
+      "label": "View pricing",
+      "detail": "Opens checkout so a visitor can compare plans.",
+      "source": {
+        "file": "src/pages/Landing.tsx",
+        "startLine": 26,
+        "endLine": 28
+      }
+    },
+    {
+      "id": "page-login",
+      "type": "page",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Login",
+      "summary": "/login",
+      "detail": "Signs the user in with a password or GitHub, then opens the dashboard.",
+      "source": {
+        "file": "src/pages/Login.tsx",
+        "startLine": 1,
+        "endLine": 11
+      },
+      "metadata": {
+        "route": "/login",
+        "authRequired": false
+      }
+    },
+    {
+      "id": "comp-login-form",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-login",
+      "label": "Login form",
+      "detail": "Email and password form. A 401 stays on this page.",
+      "source": {
+        "file": "src/components/LoginForm.tsx",
+        "startLine": 1,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "ix-sign-in",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-login",
+      "label": "Sign in",
+      "detail": "Submits the login form to POST /api/login.",
+      "source": {
+        "file": "src/components/LoginForm.tsx",
+        "startLine": 28,
+        "endLine": 38
+      }
+    },
+    {
+      "id": "ix-github",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-login",
+      "label": "Continue with GitHub",
+      "detail": "Starts GitHub OAuth and returns the user to Harbor with a session.",
+      "source": {
+        "file": "src/pages/Login.tsx",
+        "startLine": 13,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "page-dashboard",
+      "type": "page",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Dashboard",
+      "summary": "/app",
+      "detail": "Home for a signed-in user. Navigation opens Projects, Profile, and Settings.",
+      "source": {
+        "file": "src/pages/Dashboard.tsx",
+        "startLine": 1,
+        "endLine": 11
+      },
+      "metadata": {
+        "route": "/app",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "comp-nav",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-dashboard",
+      "label": "Navigation",
+      "detail": "Links to the main areas of the signed-in app.",
+      "source": {
+        "file": "src/pages/Dashboard.tsx",
+        "startLine": 13,
+        "endLine": 21
+      }
+    },
+    {
+      "id": "comp-recent",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-dashboard",
+      "label": "Recent activity",
+      "detail": "Shows the latest project changes for the signed-in user.",
+      "source": {
+        "file": "src/pages/Dashboard.tsx",
+        "startLine": 35,
+        "endLine": 37
+      }
+    },
+    {
+      "id": "comp-profile-menu",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-dashboard",
+      "label": "Profile menu",
+      "detail": "Account menu in the dashboard header.",
+      "source": {
+        "file": "src/pages/Dashboard.tsx",
+        "startLine": 39,
+        "endLine": 41
+      }
+    },
+    {
+      "id": "ix-goto-projects",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-dashboard",
+      "label": "Open projects",
+      "detail": "Navigates from the dashboard to the projects page.",
+      "source": {
+        "file": "src/pages/Dashboard.tsx",
+        "startLine": 23,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "ix-goto-profile",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-dashboard",
+      "label": "Open profile",
+      "detail": "Navigates from the dashboard to the profile page.",
+      "source": {
+        "file": "src/pages/Dashboard.tsx",
+        "startLine": 27,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "ix-goto-settings",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-dashboard",
+      "label": "Open settings",
+      "detail": "Navigates from the dashboard to settings.",
+      "source": {
+        "file": "src/pages/Dashboard.tsx",
+        "startLine": 31,
+        "endLine": 33
+      }
+    },
+    {
+      "id": "page-projects",
+      "type": "page",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Projects",
+      "summary": "/app/projects",
+      "detail": "Lists the workspace projects. Create Project starts a new one.",
+      "source": {
+        "file": "src/pages/Projects.tsx",
+        "startLine": 1,
+        "endLine": 12
+      },
+      "metadata": {
+        "route": "/app/projects",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "comp-search",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-projects",
+      "label": "Search",
+      "detail": "Filters the project list by name.",
+      "source": {
+        "file": "src/pages/Projects.tsx",
+        "startLine": 14,
+        "endLine": 16
+      }
+    },
+    {
+      "id": "ix-search",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-projects",
+      "label": "Search projects",
+      "detail": "Calls GET /api/projects with the current query.",
+      "source": {
+        "file": "src/pages/Projects.tsx",
+        "startLine": 18,
+        "endLine": 22
+      }
+    },
+    {
+      "id": "comp-project-list",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-projects",
+      "label": "Project list",
+      "detail": "Renders the projects returned by GET /api/projects.",
+      "source": {
+        "file": "src/components/ProjectList.tsx",
+        "startLine": 1,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "comp-project-card",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-projects",
+      "label": "Project card",
+      "detail": "One project in the list. Summarize asks OpenAI for a short description.",
+      "source": {
+        "file": "src/pages/Projects.tsx",
+        "startLine": 24,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "ix-create",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-projects",
+      "label": "Create Project",
+      "summary": "CreateProjectButton",
+      "detail": "Posts the new project name to POST /api/projects.",
+      "source": {
+        "file": "src/components/CreateProjectButton.tsx",
+        "startLine": 1,
+        "endLine": 44
+      }
+    },
+    {
+      "id": "ix-summarize",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-projects",
+      "label": "Summarize",
+      "detail": "Asks the API to summarize one project with OpenAI.",
+      "source": {
+        "file": "src/pages/Projects.tsx",
+        "startLine": 28,
+        "endLine": 34
+      }
+    },
+    {
+      "id": "page-profile",
+      "type": "page",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Profile",
+      "summary": "/app/profile",
+      "detail": "The signed-in user's name and avatar.",
+      "source": {
+        "file": "src/pages/Profile.tsx",
+        "startLine": 1,
+        "endLine": 8
+      },
+      "metadata": {
+        "route": "/app/profile",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "comp-profile-form",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-profile",
+      "label": "Profile form",
+      "detail": "Edits the display name stored on the users table.",
+      "source": {
+        "file": "src/pages/Profile.tsx",
+        "startLine": 10,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "ix-save-profile",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-profile",
+      "label": "Save profile",
+      "detail": "Patches /api/me with the new name.",
+      "source": {
+        "file": "src/pages/Profile.tsx",
+        "startLine": 14,
+        "endLine": 22
+      }
+    },
+    {
+      "id": "ix-upload-avatar",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-profile",
+      "label": "Upload avatar",
+      "detail": "Stores the avatar file in Amazon S3.",
+      "source": {
+        "file": "src/pages/Profile.tsx",
+        "startLine": 24,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "page-settings",
+      "type": "page",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Settings",
+      "summary": "/app/settings",
+      "detail": "Workspace preferences. Upgrade plan opens checkout.",
+      "source": {
+        "file": "src/pages/Settings.tsx",
+        "startLine": 1,
+        "endLine": 10
+      },
+      "metadata": {
+        "route": "/app/settings",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "ix-save-settings",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-settings",
+      "label": "Save settings",
+      "detail": "Patches /api/settings for the signed-in user.",
+      "source": {
+        "file": "src/pages/Settings.tsx",
+        "startLine": 12,
+        "endLine": 20
+      }
+    },
+    {
+      "id": "ix-upgrade",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-settings",
+      "label": "Upgrade plan",
+      "detail": "Navigates to checkout to start a subscription.",
+      "source": {
+        "file": "src/pages/Settings.tsx",
+        "startLine": 22,
+        "endLine": 24
+      }
+    },
+    {
+      "id": "page-checkout",
+      "type": "page",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Checkout",
+      "summary": "/checkout",
+      "detail": "Subscription checkout. Subscribe charges Stripe and records the plan.",
+      "source": {
+        "file": "src/pages/Checkout.tsx",
+        "startLine": 1,
+        "endLine": 9
+      },
+      "metadata": {
+        "route": "/checkout",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "comp-plans",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-checkout",
+      "label": "Plan picker",
+      "detail": "Chooses the Harbor plan sent to checkout.",
+      "source": {
+        "file": "src/pages/Checkout.tsx",
+        "startLine": 11,
+        "endLine": 13
+      }
+    },
+    {
+      "id": "comp-payment",
+      "type": "component",
+      "layer": "surface",
+      "parentId": "page-checkout",
+      "label": "Payment form",
+      "detail": "Collects the card that CheckoutService sends to Stripe.",
+      "source": {
+        "file": "src/pages/Checkout.tsx",
+        "startLine": 15,
+        "endLine": 17
+      }
+    },
+    {
+      "id": "ix-subscribe",
+      "type": "interaction",
+      "layer": "behavior",
+      "parentId": "page-checkout",
+      "label": "Subscribe",
+      "detail": "Posts the chosen plan to POST /api/checkout.",
+      "source": {
+        "file": "src/pages/Checkout.tsx",
+        "startLine": 19,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "api-login",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "POST /api/login",
+      "detail": "Password login. Handled by AuthService. A bad password raises Invalid credentials.",
+      "source": {
+        "file": "src/routes/auth.ts",
+        "startLine": 1,
+        "endLine": 5
+      },
+      "metadata": {
+        "method": "POST",
+        "path": "/api/login",
+        "authRequired": false
+      }
+    },
+    {
+      "id": "api-github",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "POST /api/auth/github",
+      "detail": "Builds the GitHub OAuth URL and, after the callback, opens a session.",
+      "source": {
+        "file": "src/routes/auth.ts",
+        "startLine": 7,
+        "endLine": 10
+      },
+      "metadata": {
+        "method": "POST",
+        "path": "/api/auth/github",
+        "authRequired": false
+      }
+    },
+    {
+      "id": "api-projects-create",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "POST /api/projects",
+      "detail": "Creates a project. Authentication is required before ProjectController runs.",
+      "source": {
+        "file": "src/routes/projects.ts",
+        "startLine": 1,
+        "endLine": 5
+      },
+      "metadata": {
+        "method": "POST",
+        "path": "/api/projects",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "api-projects-list",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "GET /api/projects",
+      "detail": "Returns the signed-in user's projects. Authentication is required.",
+      "source": {
+        "file": "src/routes/projects.ts",
+        "startLine": 7,
+        "endLine": 10
+      },
+      "metadata": {
+        "method": "GET",
+        "path": "/api/projects",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "api-summary",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "POST /api/projects/:id/summary",
+      "detail": "Summarizes one project. Authentication is required. The text comes from OpenAI.",
+      "source": {
+        "file": "src/routes/projects.ts",
+        "startLine": 12,
+        "endLine": 15
+      },
+      "metadata": {
+        "method": "POST",
+        "path": "/api/projects/:id/summary",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "api-profile",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "PATCH /api/me",
+      "detail": "Updates the signed-in user's profile. Authentication is required.",
+      "source": {
+        "file": "src/routes/account.ts",
+        "startLine": 1,
+        "endLine": 5
+      },
+      "metadata": {
+        "method": "PATCH",
+        "path": "/api/me",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "api-avatar",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "POST /api/me/avatar",
+      "detail": "Accepts an avatar upload. Authentication is required. The object is stored in S3.",
+      "source": {
+        "file": "src/routes/account.ts",
+        "startLine": 7,
+        "endLine": 13
+      },
+      "metadata": {
+        "method": "POST",
+        "path": "/api/me/avatar",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "api-settings",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "PATCH /api/settings",
+      "detail": "Saves workspace settings for the signed-in user. Authentication is required.",
+      "source": {
+        "file": "src/routes/account.ts",
+        "startLine": 15,
+        "endLine": 19
+      },
+      "metadata": {
+        "method": "PATCH",
+        "path": "/api/settings",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "api-checkout",
+      "type": "api",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "POST /api/checkout",
+      "detail": "Starts a subscription. Authentication is required. Payment goes to Stripe.",
+      "source": {
+        "file": "src/routes/billing.ts",
+        "startLine": 1,
+        "endLine": 5
+      },
+      "metadata": {
+        "method": "POST",
+        "path": "/api/checkout",
+        "authRequired": true
+      }
+    },
+    {
+      "id": "auth-require",
+      "type": "auth",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "Require auth",
+      "summary": "middleware",
+      "detail": "Rejects the request with 401 unless the session cookie belongs to a user.",
+      "source": {
+        "file": "src/middleware/requireAuth.ts",
+        "startLine": 1,
+        "endLine": 16
+      }
+    },
+    {
+      "id": "auth-session",
+      "type": "auth",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "Session",
+      "summary": "signed cookie",
+      "detail": "The session created at login. Presenting it is what opens the dashboard.",
+      "source": {
+        "file": "src/services/auth.ts",
+        "startLine": 31,
+        "endLine": 31
+      }
+    },
+    {
+      "id": "svc-auth",
+      "type": "service",
+      "layer": "backend",
+      "parentId": null,
+      "label": "AuthService",
+      "summary": "src/services/auth.ts",
+      "detail": "Checks the password, talks to GitHub for OAuth, and creates a session.",
+      "source": {
+        "file": "src/services/auth.ts",
+        "startLine": 1,
+        "endLine": 9
+      }
+    },
+    {
+      "id": "svc-project",
+      "type": "service",
+      "layer": "backend",
+      "parentId": null,
+      "label": "ProjectService",
+      "summary": "src/services/project.ts",
+      "detail": "Business logic for creating, listing, and summarizing projects.",
+      "source": {
+        "file": "src/services/project.ts",
+        "startLine": 1,
+        "endLine": 15
+      }
+    },
+    {
+      "id": "svc-checkout",
+      "type": "service",
+      "layer": "backend",
+      "parentId": null,
+      "label": "CheckoutService",
+      "summary": "src/services/checkout.ts",
+      "detail": "Starts a subscription and records it after Stripe accepts the payment.",
+      "source": {
+        "file": "src/services/checkout.ts",
+        "startLine": 1,
+        "endLine": 5
+      }
+    },
+    {
+      "id": "svc-user",
+      "type": "service",
+      "layer": "backend",
+      "parentId": null,
+      "label": "UserService",
+      "summary": "src/services/user.ts",
+      "detail": "Updates the user profile and stores avatar objects.",
+      "source": {
+        "file": "src/services/user.ts",
+        "startLine": 1,
+        "endLine": 9
+      }
+    },
+    {
+      "id": "fn-auth-login",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "AuthService.login()",
+      "summary": "src/services/auth.ts",
+      "detail": "Reads the users table and, on success, creates a session.",
+      "source": {
+        "file": "src/services/auth.ts",
+        "startLine": 11,
+        "endLine": 19
+      }
+    },
+    {
+      "id": "fn-auth-session",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "AuthService.createSession()",
+      "summary": "src/services/auth.ts",
+      "detail": "Inserts a row in sessions and returns the id written into the cookie.",
+      "source": {
+        "file": "src/services/auth.ts",
+        "startLine": 25,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "fn-project-controller",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "ProjectController.create",
+      "summary": "src/controllers/ProjectController.ts",
+      "detail": "The create action on ProjectController. It delegates to ProjectService.",
+      "source": {
+        "file": "src/controllers/ProjectController.ts",
+        "startLine": 1,
+        "endLine": 3
+      }
+    },
+    {
+      "id": "fn-project-list",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "ProjectController.list",
+      "summary": "src/controllers/ProjectController.ts",
+      "detail": "The list action on ProjectController.",
+      "source": {
+        "file": "src/controllers/ProjectController.ts",
+        "startLine": 5,
+        "endLine": 7
+      }
+    },
+    {
+      "id": "fn-project-create",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "ProjectService.create()",
+      "summary": "src/services/project.ts",
+      "detail": "Inserts a project row. A duplicate slug raises Duplicate project name.",
+      "source": {
+        "file": "src/services/project.ts",
+        "startLine": 17,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "fn-project-list-svc",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "ProjectService.list()",
+      "summary": "src/services/project.ts",
+      "detail": "Reads projects matching the search query.",
+      "source": {
+        "file": "src/services/project.ts",
+        "startLine": 32,
+        "endLine": 34
+      }
+    },
+    {
+      "id": "fn-project-summary",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "ProjectService.summarize()",
+      "summary": "src/services/project.ts",
+      "detail": "Reads the project and asks OpenAI for a short summary.",
+      "source": {
+        "file": "src/services/project.ts",
+        "startLine": 36,
+        "endLine": 47
+      }
+    },
+    {
+      "id": "fn-checkout",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "CheckoutService.createSubscription()",
+      "summary": "src/services/checkout.ts",
+      "detail": "Sends the payment to Stripe and writes the subscriptions row.",
+      "source": {
+        "file": "src/services/checkout.ts",
+        "startLine": 7,
+        "endLine": 23
+      }
+    },
+    {
+      "id": "fn-user-update",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "UserService.updateProfile()",
+      "summary": "src/services/user.ts",
+      "detail": "Writes the user's name on the users table.",
+      "source": {
+        "file": "src/services/user.ts",
+        "startLine": 11,
+        "endLine": 13
+      }
+    },
+    {
+      "id": "fn-avatar",
+      "type": "function",
+      "layer": "backend",
+      "parentId": null,
+      "label": "UserService.storeAvatar()",
+      "summary": "src/services/user.ts",
+      "detail": "Puts the avatar object in the harbor-avatars S3 bucket.",
+      "source": {
+        "file": "src/services/user.ts",
+        "startLine": 15,
+        "endLine": 18
+      }
+    },
+    {
+      "id": "db-postgres",
+      "type": "database",
+      "layer": "data",
+      "parentId": null,
+      "label": "PostgreSQL",
+      "summary": "primary database",
+      "detail": "Harbor's relational database. Open it to see tables and which columns reference each other.",
+      "source": {
+        "file": "src/db/schema.sql",
+        "startLine": 1,
+        "endLine": 37
+      }
+    },
+    {
+      "id": "table-users",
+      "type": "table",
+      "layer": "data",
+      "parentId": "db-postgres",
+      "label": "users",
+      "summary": "table",
+      "detail": "Accounts. Sessions, projects, memberships, and subscriptions all reference this table.",
+      "source": {
+        "file": "src/db/schema.sql",
+        "startLine": 3,
+        "endLine": 9
+      }
+    },
+    {
+      "id": "table-sessions",
+      "type": "table",
+      "layer": "data",
+      "parentId": "db-postgres",
+      "label": "sessions",
+      "summary": "table",
+      "detail": "Server-side sessions written by AuthService.createSession().",
+      "source": {
+        "file": "src/db/schema.sql",
+        "startLine": 11,
+        "endLine": 15
+      }
+    },
+    {
+      "id": "table-projects",
+      "type": "table",
+      "layer": "data",
+      "parentId": "db-postgres",
+      "label": "projects",
+      "summary": "table",
+      "detail": "One row per Harbor project. Written by ProjectService.create().",
+      "source": {
+        "file": "src/db/schema.sql",
+        "startLine": 17,
+        "endLine": 22
+      }
+    },
+    {
+      "id": "table-members",
+      "type": "table",
+      "layer": "data",
+      "parentId": "db-postgres",
+      "label": "project_members",
+      "summary": "table",
+      "detail": "Joins users to projects.",
+      "source": {
+        "file": "src/db/schema.sql",
+        "startLine": 24,
+        "endLine": 28
+      }
+    },
+    {
+      "id": "table-subscriptions",
+      "type": "table",
+      "layer": "data",
+      "parentId": "db-postgres",
+      "label": "subscriptions",
+      "summary": "table",
+      "detail": "The plan and Stripe ids for a paying workspace.",
+      "source": {
+        "file": "src/db/schema.sql",
+        "startLine": 30,
+        "endLine": 37
+      }
+    },
+    {
+      "id": "ext-stripe",
+      "type": "external",
+      "layer": "external",
+      "parentId": null,
+      "label": "Stripe",
+      "summary": "payments",
+      "detail": "CheckoutService.createSubscription() creates the Stripe subscription and stores its id.",
+      "source": {
+        "file": "src/services/checkout.ts",
+        "startLine": 29,
+        "endLine": 35
+      }
+    },
+    {
+      "id": "ext-github",
+      "type": "external",
+      "layer": "external",
+      "parentId": null,
+      "label": "GitHub",
+      "summary": "OAuth",
+      "detail": "Continue with GitHub sends the user to GitHub and back into AuthService.",
+      "source": {
+        "file": "src/pages/Login.tsx",
+        "startLine": 13,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "ext-openai",
+      "type": "external",
+      "layer": "external",
+      "parentId": null,
+      "label": "OpenAI",
+      "summary": "summaries",
+      "detail": "ProjectService.summarize() calls the OpenAI chat completions API.",
+      "source": {
+        "file": "src/services/project.ts",
+        "startLine": 36,
+        "endLine": 47
+      }
+    },
+    {
+      "id": "ext-s3",
+      "type": "external",
+      "layer": "external",
+      "parentId": null,
+      "label": "Amazon S3",
+      "summary": "avatars",
+      "detail": "UserService.storeAvatar() puts objects in the harbor-avatars bucket.",
+      "source": {
+        "file": "src/services/user.ts",
+        "startLine": 20,
+        "endLine": 24
+      }
+    },
+    {
+      "id": "err-credentials",
+      "type": "error",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "Invalid credentials",
+      "summary": "401",
+      "detail": "AuthService.login() rejects an unknown email or a bad password. The login form stays put.",
+      "source": {
+        "file": "src/services/auth.ts",
+        "startLine": 21,
+        "endLine": 23
+      },
+      "metadata": {
+        "errorMessage": "Email or password is incorrect.",
+        "statusCode": 401
+      }
+    },
+    {
+      "id": "err-duplicate",
+      "type": "error",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "Duplicate project name",
+      "summary": "409",
+      "detail": "ProjectService.create() refuses a slug that is already in projects.",
+      "source": {
+        "file": "src/services/project.ts",
+        "startLine": 28,
+        "endLine": 30
+      },
+      "metadata": {
+        "errorMessage": "A project with that name already exists.",
+        "statusCode": 409
+      }
+    },
+    {
+      "id": "err-payment",
+      "type": "error",
+      "layer": "behavior",
+      "parentId": null,
+      "label": "Payment declined",
+      "summary": "402",
+      "detail": "Stripe did not accept the card. No subscriptions row is written.",
+      "source": {
+        "file": "src/services/checkout.ts",
+        "startLine": 25,
+        "endLine": 27
+      },
+      "metadata": {
+        "errorMessage": "The card was declined.",
+        "statusCode": 402
+      }
+    },
+    {
+      "id": "file-create-btn",
+      "type": "file",
+      "layer": "backend",
+      "parentId": null,
+      "label": "src/components/CreateProjectButton.tsx",
+      "detail": "The Create Project button and the POST it fires.",
+      "source": {
+        "file": "src/components/CreateProjectButton.tsx",
+        "startLine": 1,
+        "endLine": 44
+      }
+    },
+    {
+      "id": "file-controller",
+      "type": "file",
+      "layer": "backend",
+      "parentId": null,
+      "label": "src/controllers/ProjectController.ts",
+      "detail": "ProjectController create and list actions.",
+      "source": {
+        "file": "src/controllers/ProjectController.ts",
+        "startLine": 1,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "file-project-svc",
+      "type": "file",
+      "layer": "backend",
+      "parentId": null,
+      "label": "src/services/project.ts",
+      "detail": "ProjectService, including create(), list(), and summarize().",
+      "source": {
+        "file": "src/services/project.ts",
+        "startLine": 1,
+        "endLine": 56
+      }
+    },
+    {
+      "id": "file-auth-svc",
+      "type": "file",
+      "layer": "backend",
+      "parentId": null,
+      "label": "src/services/auth.ts",
+      "detail": "AuthService login and session creation.",
+      "source": {
+        "file": "src/services/auth.ts",
+        "startLine": 1,
+        "endLine": 40
+      }
+    },
+    {
+      "id": "file-checkout-svc",
+      "type": "file",
+      "layer": "backend",
+      "parentId": null,
+      "label": "src/services/checkout.ts",
+      "detail": "CheckoutService and the Stripe call.",
+      "source": {
+        "file": "src/services/checkout.ts",
+        "startLine": 1,
+        "endLine": 46
+      }
+    },
+    {
+      "id": "file-require",
+      "type": "file",
+      "layer": "backend",
+      "parentId": null,
+      "label": "src/middleware/requireAuth.ts",
+      "detail": "The middleware that protects signed-in APIs.",
+      "source": {
+        "file": "src/middleware/requireAuth.ts",
+        "startLine": 1,
+        "endLine": 16
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-page-landing-contains-comp-hero",
+      "source": "page-landing",
+      "target": "comp-hero",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-landing-contains-ix-get-started",
+      "source": "page-landing",
+      "target": "ix-get-started",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-landing-contains-ix-pricing",
+      "source": "page-landing",
+      "target": "ix-pricing",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-login-contains-comp-login-form",
+      "source": "page-login",
+      "target": "comp-login-form",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-login-contains-ix-sign-in",
+      "source": "page-login",
+      "target": "ix-sign-in",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-login-contains-ix-github",
+      "source": "page-login",
+      "target": "ix-github",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-dashboard-contains-comp-nav",
+      "source": "page-dashboard",
+      "target": "comp-nav",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-dashboard-contains-comp-recent",
+      "source": "page-dashboard",
+      "target": "comp-recent",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-dashboard-contains-comp-profile-menu",
+      "source": "page-dashboard",
+      "target": "comp-profile-menu",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-dashboard-contains-ix-goto-projects",
+      "source": "page-dashboard",
+      "target": "ix-goto-projects",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-dashboard-contains-ix-goto-profile",
+      "source": "page-dashboard",
+      "target": "ix-goto-profile",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-dashboard-contains-ix-goto-settings",
+      "source": "page-dashboard",
+      "target": "ix-goto-settings",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-projects-contains-comp-search",
+      "source": "page-projects",
+      "target": "comp-search",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-projects-contains-ix-search",
+      "source": "page-projects",
+      "target": "ix-search",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-projects-contains-comp-project-list",
+      "source": "page-projects",
+      "target": "comp-project-list",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-projects-contains-comp-project-card",
+      "source": "page-projects",
+      "target": "comp-project-card",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-projects-contains-ix-create",
+      "source": "page-projects",
+      "target": "ix-create",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-projects-contains-ix-summarize",
+      "source": "page-projects",
+      "target": "ix-summarize",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-profile-contains-comp-profile-form",
+      "source": "page-profile",
+      "target": "comp-profile-form",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-profile-contains-ix-save-profile",
+      "source": "page-profile",
+      "target": "ix-save-profile",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-profile-contains-ix-upload-avatar",
+      "source": "page-profile",
+      "target": "ix-upload-avatar",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-settings-contains-ix-save-settings",
+      "source": "page-settings",
+      "target": "ix-save-settings",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-settings-contains-ix-upgrade",
+      "source": "page-settings",
+      "target": "ix-upgrade",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-checkout-contains-comp-plans",
+      "source": "page-checkout",
+      "target": "comp-plans",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-checkout-contains-comp-payment",
+      "source": "page-checkout",
+      "target": "comp-payment",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-checkout-contains-ix-subscribe",
+      "source": "page-checkout",
+      "target": "ix-subscribe",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-db-postgres-contains-table-users",
+      "source": "db-postgres",
+      "target": "table-users",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-db-postgres-contains-table-sessions",
+      "source": "db-postgres",
+      "target": "table-sessions",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-db-postgres-contains-table-projects",
+      "source": "db-postgres",
+      "target": "table-projects",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-db-postgres-contains-table-members",
+      "source": "db-postgres",
+      "target": "table-members",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-db-postgres-contains-table-subscriptions",
+      "source": "db-postgres",
+      "target": "table-subscriptions",
+      "kind": "contains",
+      "label": "contains"
+    },
+    {
+      "id": "e-page-landing-navigates_to-page-login",
+      "source": "page-landing",
+      "target": "page-login",
+      "kind": "navigates_to",
+      "label": "navigates to",
+      "skeleton": true
+    },
+    {
+      "id": "e-page-login-authenticates-page-dashboard",
+      "source": "page-login",
+      "target": "page-dashboard",
+      "kind": "authenticates",
+      "label": "authenticates",
+      "skeleton": true
+    },
+    {
+      "id": "e-page-dashboard-navigates_to-page-projects",
+      "source": "page-dashboard",
+      "target": "page-projects",
+      "kind": "navigates_to",
+      "label": "navigates to",
+      "skeleton": true
+    },
+    {
+      "id": "e-page-dashboard-navigates_to-page-profile",
+      "source": "page-dashboard",
+      "target": "page-profile",
+      "kind": "navigates_to",
+      "label": "navigates to",
+      "skeleton": true
+    },
+    {
+      "id": "e-page-dashboard-navigates_to-page-settings",
+      "source": "page-dashboard",
+      "target": "page-settings",
+      "kind": "navigates_to",
+      "label": "navigates to",
+      "skeleton": true
+    },
+    {
+      "id": "e-page-settings-navigates_to-page-checkout",
+      "source": "page-settings",
+      "target": "page-checkout",
+      "kind": "navigates_to",
+      "label": "navigates to",
+      "skeleton": true
+    },
+    {
+      "id": "e-ix-get-started-navigates_to-page-login",
+      "source": "ix-get-started",
+      "target": "page-login",
+      "kind": "navigates_to",
+      "label": "navigates to"
+    },
+    {
+      "id": "e-ix-pricing-navigates_to-page-checkout",
+      "source": "ix-pricing",
+      "target": "page-checkout",
+      "kind": "navigates_to",
+      "label": "navigates to"
+    },
+    {
+      "id": "e-ix-goto-projects-navigates_to-page-projects",
+      "source": "ix-goto-projects",
+      "target": "page-projects",
+      "kind": "navigates_to",
+      "label": "navigates to"
+    },
+    {
+      "id": "e-ix-goto-profile-navigates_to-page-profile",
+      "source": "ix-goto-profile",
+      "target": "page-profile",
+      "kind": "navigates_to",
+      "label": "navigates to"
+    },
+    {
+      "id": "e-ix-goto-settings-navigates_to-page-settings",
+      "source": "ix-goto-settings",
+      "target": "page-settings",
+      "kind": "navigates_to",
+      "label": "navigates to"
+    },
+    {
+      "id": "e-ix-upgrade-navigates_to-page-checkout",
+      "source": "ix-upgrade",
+      "target": "page-checkout",
+      "kind": "navigates_to",
+      "label": "navigates to"
+    },
+    {
+      "id": "e-ix-sign-in-calls-api-login",
+      "source": "ix-sign-in",
+      "target": "api-login",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-login-handles-svc-auth",
+      "source": "api-login",
+      "target": "svc-auth",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-svc-auth-calls-fn-auth-login",
+      "source": "svc-auth",
+      "target": "fn-auth-login",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-fn-auth-login-reads-table-users",
+      "source": "fn-auth-login",
+      "target": "table-users",
+      "kind": "reads",
+      "label": "reads"
+    },
+    {
+      "id": "e-fn-auth-login-calls-fn-auth-session",
+      "source": "fn-auth-login",
+      "target": "fn-auth-session",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-fn-auth-session-writes-table-sessions",
+      "source": "fn-auth-session",
+      "target": "table-sessions",
+      "kind": "writes",
+      "label": "writes"
+    },
+    {
+      "id": "e-fn-auth-session-authenticates-auth-session",
+      "source": "fn-auth-session",
+      "target": "auth-session",
+      "kind": "authenticates",
+      "label": "authenticates"
+    },
+    {
+      "id": "e-auth-session-authenticates-page-dashboard",
+      "source": "auth-session",
+      "target": "page-dashboard",
+      "kind": "authenticates",
+      "label": "authenticates"
+    },
+    {
+      "id": "e-api-login-raises-err-credentials",
+      "source": "api-login",
+      "target": "err-credentials",
+      "kind": "raises",
+      "label": "raises"
+    },
+    {
+      "id": "e-ix-github-calls-api-github",
+      "source": "ix-github",
+      "target": "api-github",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-github-calls-ext-github",
+      "source": "api-github",
+      "target": "ext-github",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-github-handles-svc-auth",
+      "source": "api-github",
+      "target": "svc-auth",
+      "kind": "handles",
+      "label": "handles",
+      "expand": false
+    },
+    {
+      "id": "e-api-github-authenticates-auth-session",
+      "source": "api-github",
+      "target": "auth-session",
+      "kind": "authenticates",
+      "label": "authenticates"
+    },
+    {
+      "id": "e-ix-create-calls-api-projects-create",
+      "source": "ix-create",
+      "target": "api-projects-create",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-projects-create-authenticates-auth-require",
+      "source": "api-projects-create",
+      "target": "auth-require",
+      "kind": "authenticates",
+      "label": "authentication required"
+    },
+    {
+      "id": "e-api-projects-create-handles-fn-project-controller",
+      "source": "api-projects-create",
+      "target": "fn-project-controller",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-fn-project-controller-calls-svc-project",
+      "source": "fn-project-controller",
+      "target": "svc-project",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-svc-project-calls-fn-project-create",
+      "source": "svc-project",
+      "target": "fn-project-create",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-svc-project-calls-fn-project-list-svc",
+      "source": "svc-project",
+      "target": "fn-project-list-svc",
+      "kind": "calls",
+      "label": "calls",
+      "expand": false
+    },
+    {
+      "id": "e-fn-project-create-writes-table-projects",
+      "source": "fn-project-create",
+      "target": "table-projects",
+      "kind": "writes",
+      "label": "writes"
+    },
+    {
+      "id": "e-api-projects-create-raises-err-duplicate",
+      "source": "api-projects-create",
+      "target": "err-duplicate",
+      "kind": "raises",
+      "label": "raises"
+    },
+    {
+      "id": "e-comp-project-list-queries-api-projects-list",
+      "source": "comp-project-list",
+      "target": "api-projects-list",
+      "kind": "queries",
+      "label": "queries"
+    },
+    {
+      "id": "e-ix-search-calls-api-projects-list",
+      "source": "ix-search",
+      "target": "api-projects-list",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-projects-list-authenticates-auth-require",
+      "source": "api-projects-list",
+      "target": "auth-require",
+      "kind": "authenticates",
+      "label": "authentication required"
+    },
+    {
+      "id": "e-api-projects-list-handles-fn-project-list",
+      "source": "api-projects-list",
+      "target": "fn-project-list",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-fn-project-list-calls-fn-project-list-svc",
+      "source": "fn-project-list",
+      "target": "fn-project-list-svc",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-fn-project-list-svc-reads-table-projects",
+      "source": "fn-project-list-svc",
+      "target": "table-projects",
+      "kind": "reads",
+      "label": "reads"
+    },
+    {
+      "id": "e-fn-project-list-svc-calls-svc-project",
+      "source": "fn-project-list-svc",
+      "target": "svc-project",
+      "kind": "calls",
+      "label": "calls",
+      "expand": false
+    },
+    {
+      "id": "e-ix-summarize-calls-api-summary",
+      "source": "ix-summarize",
+      "target": "api-summary",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-summary-authenticates-auth-require",
+      "source": "api-summary",
+      "target": "auth-require",
+      "kind": "authenticates",
+      "label": "authentication required"
+    },
+    {
+      "id": "e-api-summary-handles-fn-project-summary",
+      "source": "api-summary",
+      "target": "fn-project-summary",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-fn-project-summary-reads-table-projects",
+      "source": "fn-project-summary",
+      "target": "table-projects",
+      "kind": "reads",
+      "label": "reads"
+    },
+    {
+      "id": "e-fn-project-summary-calls-ext-openai",
+      "source": "fn-project-summary",
+      "target": "ext-openai",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-ix-save-profile-calls-api-profile",
+      "source": "ix-save-profile",
+      "target": "api-profile",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-profile-authenticates-auth-require",
+      "source": "api-profile",
+      "target": "auth-require",
+      "kind": "authenticates",
+      "label": "authentication required"
+    },
+    {
+      "id": "e-api-profile-handles-svc-user",
+      "source": "api-profile",
+      "target": "svc-user",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-svc-user-calls-fn-user-update",
+      "source": "svc-user",
+      "target": "fn-user-update",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-fn-user-update-writes-table-users",
+      "source": "fn-user-update",
+      "target": "table-users",
+      "kind": "writes",
+      "label": "writes"
+    },
+    {
+      "id": "e-ix-upload-avatar-calls-api-avatar",
+      "source": "ix-upload-avatar",
+      "target": "api-avatar",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-avatar-authenticates-auth-require",
+      "source": "api-avatar",
+      "target": "auth-require",
+      "kind": "authenticates",
+      "label": "authentication required"
+    },
+    {
+      "id": "e-api-avatar-handles-fn-avatar",
+      "source": "api-avatar",
+      "target": "fn-avatar",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-fn-avatar-writes-ext-s3",
+      "source": "fn-avatar",
+      "target": "ext-s3",
+      "kind": "writes",
+      "label": "writes"
+    },
+    {
+      "id": "e-fn-avatar-calls-svc-user",
+      "source": "fn-avatar",
+      "target": "svc-user",
+      "kind": "calls",
+      "label": "calls",
+      "expand": false
+    },
+    {
+      "id": "e-ix-save-settings-calls-api-settings",
+      "source": "ix-save-settings",
+      "target": "api-settings",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-settings-authenticates-auth-require",
+      "source": "api-settings",
+      "target": "auth-require",
+      "kind": "authenticates",
+      "label": "authentication required"
+    },
+    {
+      "id": "e-api-settings-handles-fn-user-update",
+      "source": "api-settings",
+      "target": "fn-user-update",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-ix-subscribe-calls-api-checkout",
+      "source": "ix-subscribe",
+      "target": "api-checkout",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-api-checkout-authenticates-auth-require",
+      "source": "api-checkout",
+      "target": "auth-require",
+      "kind": "authenticates",
+      "label": "authentication required"
+    },
+    {
+      "id": "e-api-checkout-handles-svc-checkout",
+      "source": "api-checkout",
+      "target": "svc-checkout",
+      "kind": "handles",
+      "label": "handles"
+    },
+    {
+      "id": "e-svc-checkout-calls-fn-checkout",
+      "source": "svc-checkout",
+      "target": "fn-checkout",
+      "kind": "calls",
+      "label": "calls"
+    },
+    {
+      "id": "e-fn-checkout-writes-table-subscriptions",
+      "source": "fn-checkout",
+      "target": "table-subscriptions",
+      "kind": "writes",
+      "label": "writes"
+    },
+    {
+      "id": "e-fn-checkout-sends_payment_to-ext-stripe",
+      "source": "fn-checkout",
+      "target": "ext-stripe",
+      "kind": "sends_payment_to",
+      "label": "sends payment to"
+    },
+    {
+      "id": "e-api-checkout-raises-err-payment",
+      "source": "api-checkout",
+      "target": "err-payment",
+      "kind": "raises",
+      "label": "raises"
+    },
+    {
+      "id": "e-table-sessions-depends_on-table-users",
+      "source": "table-sessions",
+      "target": "table-users",
+      "kind": "depends_on",
+      "label": "references",
+      "expand": false
+    },
+    {
+      "id": "e-table-projects-depends_on-table-users",
+      "source": "table-projects",
+      "target": "table-users",
+      "kind": "depends_on",
+      "label": "references",
+      "expand": false
+    },
+    {
+      "id": "e-table-members-depends_on-table-projects",
+      "source": "table-members",
+      "target": "table-projects",
+      "kind": "depends_on",
+      "label": "references",
+      "expand": false
+    },
+    {
+      "id": "e-table-members-depends_on-table-users",
+      "source": "table-members",
+      "target": "table-users",
+      "kind": "depends_on",
+      "label": "references",
+      "expand": false
+    },
+    {
+      "id": "e-table-subscriptions-depends_on-table-users",
+      "source": "table-subscriptions",
+      "target": "table-users",
+      "kind": "depends_on",
+      "label": "references",
+      "expand": false
+    },
+    {
+      "id": "e-ix-create-defined_in-file-create-btn",
+      "source": "ix-create",
+      "target": "file-create-btn",
+      "kind": "defined_in",
+      "label": "defined in",
+      "expand": false
+    },
+    {
+      "id": "e-fn-project-controller-defined_in-file-controller",
+      "source": "fn-project-controller",
+      "target": "file-controller",
+      "kind": "defined_in",
+      "label": "defined in",
+      "expand": false
+    },
+    {
+      "id": "e-fn-project-create-defined_in-file-project-svc",
+      "source": "fn-project-create",
+      "target": "file-project-svc",
+      "kind": "defined_in",
+      "label": "defined in",
+      "expand": false
+    },
+    {
+      "id": "e-fn-auth-login-defined_in-file-auth-svc",
+      "source": "fn-auth-login",
+      "target": "file-auth-svc",
+      "kind": "defined_in",
+      "label": "defined in",
+      "expand": false
+    },
+    {
+      "id": "e-fn-checkout-defined_in-file-checkout-svc",
+      "source": "fn-checkout",
+      "target": "file-checkout-svc",
+      "kind": "defined_in",
+      "label": "defined in",
+      "expand": false
+    },
+    {
+      "id": "e-auth-require-defined_in-file-require",
+      "source": "auth-require",
+      "target": "file-require",
+      "kind": "defined_in",
+      "label": "defined in",
+      "expand": false
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow-sign-in",
+      "label": "Sign in",
+      "nodeIds": [
+        "page-landing",
+        "page-login",
+        "ix-sign-in",
+        "api-login",
+        "svc-auth",
+        "fn-auth-login",
+        "table-users",
+        "fn-auth-session",
+        "table-sessions",
+        "auth-session",
+        "page-dashboard"
+      ],
+      "edgeIds": [
+        "e-page-landing-navigates_to-page-login",
+        "e-ix-sign-in-calls-api-login",
+        "e-api-login-handles-svc-auth",
+        "e-svc-auth-calls-fn-auth-login",
+        "e-fn-auth-login-reads-table-users",
+        "e-fn-auth-login-calls-fn-auth-session",
+        "e-fn-auth-session-writes-table-sessions",
+        "e-fn-auth-session-authenticates-auth-session",
+        "e-auth-session-authenticates-page-dashboard"
+      ],
+      "description": "Landing leads to Login. The password form calls AuthService, writes a session, and opens the dashboard."
+    },
+    {
+      "id": "flow-create-project",
+      "label": "Create a project",
+      "nodeIds": [
+        "page-dashboard",
+        "page-projects",
+        "ix-create",
+        "api-projects-create",
+        "auth-require",
+        "fn-project-controller",
+        "svc-project",
+        "fn-project-create",
+        "db-postgres",
+        "table-projects"
+      ],
+      "edgeIds": [
+        "e-page-dashboard-navigates_to-page-projects",
+        "e-ix-create-calls-api-projects-create",
+        "e-api-projects-create-authenticates-auth-require",
+        "e-api-projects-create-handles-fn-project-controller",
+        "e-fn-project-controller-calls-svc-project",
+        "e-svc-project-calls-fn-project-create",
+        "e-fn-project-create-writes-table-projects"
+      ],
+      "description": "From Projects, Create Project calls POST /api/projects, passes Require auth, and ProjectService.create() writes the projects table."
+    },
+    {
+      "id": "flow-subscribe",
+      "label": "Subscribe",
+      "nodeIds": [
+        "page-settings",
+        "page-checkout",
+        "ix-subscribe",
+        "api-checkout",
+        "auth-require",
+        "svc-checkout",
+        "fn-checkout",
+        "table-subscriptions",
+        "ext-stripe"
+      ],
+      "edgeIds": [
+        "e-page-settings-navigates_to-page-checkout",
+        "e-ix-subscribe-calls-api-checkout",
+        "e-api-checkout-authenticates-auth-require",
+        "e-api-checkout-handles-svc-checkout",
+        "e-svc-checkout-calls-fn-checkout",
+        "e-fn-checkout-writes-table-subscriptions",
+        "e-fn-checkout-sends_payment_to-ext-stripe"
+      ],
+      "description": "Settings opens Checkout. Subscribe calls CheckoutService, which writes subscriptions and sends the payment to Stripe."
+    },
+    {
+      "id": "flow-browse",
+      "label": "Browse projects",
+      "nodeIds": [
+        "page-dashboard",
+        "page-projects",
+        "comp-project-list",
+        "api-projects-list",
+        "auth-require",
+        "fn-project-list",
+        "fn-project-list-svc",
+        "table-projects"
+      ],
+      "edgeIds": [
+        "e-page-dashboard-navigates_to-page-projects",
+        "e-comp-project-list-queries-api-projects-list",
+        "e-api-projects-list-authenticates-auth-require",
+        "e-api-projects-list-handles-fn-project-list",
+        "e-fn-project-list-calls-fn-project-list-svc",
+        "e-fn-project-list-svc-reads-table-projects"
+      ],
+      "description": "The project list queries GET /api/projects, which reads the projects table after Require auth."
+    },
+    {
+      "id": "flow-github",
+      "label": "Continue with GitHub",
+      "nodeIds": [
+        "page-login",
+        "ix-github",
+        "api-github",
+        "ext-github",
+        "auth-session",
+        "page-dashboard"
+      ],
+      "edgeIds": [
+        "e-ix-github-calls-api-github",
+        "e-api-github-calls-ext-github",
+        "e-api-github-authenticates-auth-session",
+        "e-auth-session-authenticates-page-dashboard"
+      ],
+      "description": "Login sends the user to GitHub OAuth and back into a Harbor session on the dashboard."
+    }
+  ],
+  "description": "Team project workspace. Sample graph for the WorkFlow map.",
+  "sources": {
+    "src/pages/Landing.tsx": "import { Link } from \"react-router-dom\";\n\nexport function LandingPage() {\n  return (\n    <main>\n      <Hero />\n      <Link to=\"/login\">Get started</Link>\n      <Link to=\"/checkout\">View pricing</Link>\n    </main>\n  );\n}\n\nfunction Hero() {\n  return (\n    <header>\n      <h1>Harbor</h1>\n      <p>Projects, people, and billing in one workspace.</p>\n    </header>\n  );\n}\n\nexport function GetStartedLink() {\n  return <a href=\"/login\">Get started</a>;\n}\n\nexport function PricingLink() {\n  return <a href=\"/checkout\">View pricing</a>;\n}",
+    "src/pages/Login.tsx": "import { LoginForm } from \"../components/LoginForm\";\n\nexport function LoginPage() {\n  return (\n    <main>\n      <h1>Sign in to Harbor</h1>\n      <LoginForm />\n      <GitHubButton />\n    </main>\n  );\n}\n\nfunction GitHubButton() {\n  async function continueWithGitHub() {\n    const response = await fetch(\"/api/auth/github\", { method: \"POST\" });\n    const { url } = await response.json();\n    window.location.assign(url);\n  }\n\n  return (\n    <button type=\"button\" onClick={() => void continueWithGitHub()}>\n      Continue with GitHub\n    </button>\n  );\n}",
+    "src/components/LoginForm.tsx": "import { useState } from \"react\";\nimport { useNavigate } from \"react-router-dom\";\n\nexport function LoginForm() {\n  const navigate = useNavigate();\n  const [error, setError] = useState<string | null>(null);\n\n  async function signIn(email: string, password: string) {\n    const response = await fetch(\"/api/login\", {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\" },\n      body: JSON.stringify({ email, password }),\n    });\n    if (response.status === 401) {\n      setError(\"Email or password is incorrect.\");\n      return;\n    }\n    if (!response.ok) {\n      setError(\"Could not sign in.\");\n      return;\n    }\n    navigate(\"/app\");\n  }\n\n  return <form onSubmit={(event) => event.preventDefault()}>{error}</form>;\n}\n\nexport async function submitLogin(email: string, password: string) {\n  const response = await fetch(\"/api/login\", {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\" },\n    body: JSON.stringify({ email, password }),\n  });\n  if (response.status === 401) {\n    throw new Error(\"Email or password is incorrect.\");\n  }\n  return response.json() as Promise<{ userId: string }>;\n}",
+    "src/pages/Dashboard.tsx": "import { Link } from \"react-router-dom\";\n\nexport function DashboardPage() {\n  return (\n    <main>\n      <Navigation />\n      <RecentActivity />\n      <ProfileMenu />\n    </main>\n  );\n}\n\nfunction Navigation() {\n  return (\n    <nav>\n      <Link to=\"/app/projects\">Projects</Link>\n      <Link to=\"/app/profile\">Profile</Link>\n      <Link to=\"/app/settings\">Settings</Link>\n    </nav>\n  );\n}\n\nexport function OpenProjectsLink() {\n  return <a href=\"/app/projects\">Open projects</a>;\n}\n\nexport function OpenProfileLink() {\n  return <a href=\"/app/profile\">Open profile</a>;\n}\n\nexport function OpenSettingsLink() {\n  return <a href=\"/app/settings\">Open settings</a>;\n}\n\nfunction RecentActivity() {\n  return <section aria-label=\"Recent activity\" />;\n}\n\nfunction ProfileMenu() {\n  return <button type=\"button\">Account</button>;\n}",
+    "src/pages/Projects.tsx": "import { CreateProjectButton } from \"../components/CreateProjectButton\";\nimport { ProjectList } from \"../components/ProjectList\";\n\nexport function ProjectsPage() {\n  return (\n    <main>\n      <SearchProjects />\n      <CreateProjectButton onCreated={() => undefined} />\n      <ProjectList />\n    </main>\n  );\n}\n\nfunction SearchProjects() {\n  return <input aria-label=\"Search projects\" placeholder=\"Search projects\" />;\n}\n\nexport async function searchProjects(query: string) {\n  const response = await fetch(`/api/projects?q=${encodeURIComponent(query)}`);\n  if (response.status === 401) throw new Error(\"Sign in required.\");\n  return response.json();\n}\n\nexport function ProjectCard(props: { name: string }) {\n  return <article>{props.name}</article>;\n}\n\nexport async function summarizeProject(projectId: string) {\n  const response = await fetch(`/api/projects/${projectId}/summary`, {\n    method: \"POST\",\n  });\n  if (!response.ok) throw new Error(\"Could not summarize the project.\");\n  return response.json() as Promise<{ summary: string }>;\n}",
+    "src/components/ProjectList.tsx": "import { ProjectCard } from \"../pages/Projects\";\n\nexport function ProjectList() {\n  return <section aria-label=\"Projects\" />;\n}\n\nexport async function loadProjects() {\n  const response = await fetch(\"/api/projects\");\n  if (response.status === 401) throw new Error(\"Sign in required.\");\n  const projects = (await response.json()) as Array<{ id: string; name: string }>;\n  return projects.map((project) => <ProjectCard key={project.id} name={project.name} />);\n}",
+    "src/components/CreateProjectButton.tsx": "import { useState } from \"react\";\n\ntype CreateProjectButtonProps = {\n  onCreated: (project: { id: string; name: string }) => void;\n};\n\nexport function CreateProjectButton({ onCreated }: CreateProjectButtonProps) {\n  const [name, setName] = useState(\"\");\n  const [error, setError] = useState<string | null>(null);\n\n  async function handleSubmit() {\n    const response = await fetch(\"/api/projects\", {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\" },\n      body: JSON.stringify({ name }),\n    });\n    if (response.status === 401) {\n      setError(\"Sign in required.\");\n      return;\n    }\n    if (response.status === 409) {\n      setError(\"A project with that name already exists.\");\n      return;\n    }\n    if (!response.ok) {\n      setError(\"Could not create the project.\");\n      return;\n    }\n    onCreated(await response.json());\n  }\n\n  return (\n    <form\n      onSubmit={(event) => {\n        event.preventDefault();\n        void handleSubmit();\n      }}\n    >\n      <input value={name} aria-label=\"Project name\" onChange={(event) => setName(event.target.value)} />\n      <button type=\"submit\">Create project</button>\n      {error ? <p role=\"alert\">{error}</p> : null}\n    </form>\n  );\n}",
+    "src/pages/Profile.tsx": "export function ProfilePage() {\n  return (\n    <main>\n      <ProfileForm />\n      <AvatarUpload />\n    </main>\n  );\n}\n\nfunction ProfileForm() {\n  return <form aria-label=\"Profile\" />;\n}\n\nexport async function saveProfile(name: string) {\n  const response = await fetch(\"/api/me\", {\n    method: \"PATCH\",\n    headers: { \"Content-Type\": \"application/json\" },\n    body: JSON.stringify({ name }),\n  });\n  if (response.status === 401) throw new Error(\"Sign in required.\");\n  if (!response.ok) throw new Error(\"Could not save profile.\");\n}\n\nexport async function uploadAvatar(file: File) {\n  const body = new FormData();\n  body.set(\"file\", file);\n  const response = await fetch(\"/api/me/avatar\", { method: \"POST\", body });\n  if (!response.ok) throw new Error(\"Could not upload the avatar.\");\n}",
+    "src/pages/Settings.tsx": "import { Link } from \"react-router-dom\";\n\nexport function SettingsPage() {\n  return (\n    <main>\n      <form aria-label=\"Workspace settings\" />\n      <Link to=\"/checkout\">Upgrade plan</Link>\n    </main>\n  );\n}\n\nexport async function saveSettings(weeklyDigest: boolean) {\n  const response = await fetch(\"/api/settings\", {\n    method: \"PATCH\",\n    headers: { \"Content-Type\": \"application/json\" },\n    body: JSON.stringify({ weeklyDigest }),\n  });\n  if (response.status === 401) throw new Error(\"Sign in required.\");\n  if (!response.ok) throw new Error(\"Could not save settings.\");\n}\n\nexport function UpgradeLink() {\n  return <a href=\"/checkout\">Upgrade plan</a>;\n}",
+    "src/pages/Checkout.tsx": "export function CheckoutPage() {\n  return (\n    <main>\n      <PlanPicker />\n      <PaymentForm />\n      <SubscribeButton plan=\"team\" />\n    </main>\n  );\n}\n\nfunction PlanPicker() {\n  return <fieldset aria-label=\"Plan\"><label><input type=\"radio\" name=\"plan\" /> Team</label></fieldset>;\n}\n\nfunction PaymentForm() {\n  return <form aria-label=\"Payment method\" />;\n}\n\nexport async function subscribe(plan: string) {\n  const response = await fetch(\"/api/checkout\", {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\" },\n    body: JSON.stringify({ plan }),\n  });\n  if (response.status === 401) throw new Error(\"Sign in required.\");\n  if (response.status === 402) throw new Error(\"The card was declined.\");\n  if (!response.ok) throw new Error(\"Could not start the subscription.\");\n  return response.json() as Promise<{ subscriptionId: string }>;\n}",
+    "src/routes/auth.ts": "export async function postLogin(request: Request) {\n  const body = (await request.json()) as { email: string; password: string };\n  const session = await authService.login(body.email, body.password);\n  return Response.json({ userId: session.userId });\n}\n\nexport async function postGitHub(request: Request) {\n  const url = await authService.githubAuthorizeUrl(request);\n  return Response.json({ url });\n}\n\ndeclare const authService: {\n  login(email: string, password: string): Promise<{ userId: string }>;\n  githubAuthorizeUrl(request: Request): Promise<string>;\n};",
+    "src/routes/projects.ts": "export async function postProject(request: Request) {\n  const body = (await request.json()) as { name: string };\n  const project = await projectController.create(body.name);\n  return Response.json(project, { status: 201 });\n}\n\nexport async function getProjects(url: URL) {\n  const projects = await projectController.list(url.searchParams.get(\"q\") ?? \"\");\n  return Response.json(projects);\n}\n\nexport async function postSummary(projectId: string) {\n  const summary = await projectService.summarize(projectId);\n  return Response.json({ summary });\n}\n\ndeclare const projectController: {\n  create(name: string): Promise<{ id: string }>;\n  list(query: string): Promise<unknown[]>;\n};\ndeclare const projectService: { summarize(projectId: string): Promise<string> };",
+    "src/routes/account.ts": "export async function patchMe(request: Request) {\n  const body = (await request.json()) as { name: string };\n  await userService.updateProfile(body.name);\n  return new Response(null, { status: 204 });\n}\n\nexport async function postAvatar(request: Request) {\n  const form = await request.formData();\n  const file = form.get(\"file\");\n  if (!(file instanceof File)) return new Response(\"Missing file\", { status: 400 });\n  await userService.storeAvatar(file);\n  return new Response(null, { status: 204 });\n}\n\nexport async function patchSettings(request: Request) {\n  const body = (await request.json()) as { weeklyDigest: boolean };\n  await userService.updateProfile(body.weeklyDigest ? \"digest:on\" : \"digest:off\");\n  return new Response(null, { status: 204 });\n}\n\ndeclare const userService: {\n  updateProfile(name: string): Promise<void>;\n  storeAvatar(file: File): Promise<void>;\n};",
+    "src/routes/billing.ts": "export async function postCheckout(request: Request) {\n  const body = (await request.json()) as { plan: string };\n  const subscription = await checkoutService.createSubscription(body.plan);\n  return Response.json(subscription, { status: 201 });\n}\n\ndeclare const checkoutService: {\n  createSubscription(plan: string): Promise<{ subscriptionId: string }>;\n};",
+    "src/middleware/requireAuth.ts": "import type { Request, Response, NextFunction } from \"express\";\n\nexport function requireAuth(req: Request, res: Response, next: NextFunction) {\n  const userId = readSession(req);\n  if (!userId) {\n    res.status(401).json({ error: \"Authentication required.\" });\n    return;\n  }\n  next();\n}\n\nfunction readSession(req: Request): string | null {\n  const header = req.header(\"cookie\") ?? \"\";\n  const match = /session=([^;]+)/.exec(header);\n  return match?.[1] ?? null;\n}",
+    "src/services/auth.ts": "export class AuthService {\n  login(email: string, password: string) {\n    return this.findUser(email, password);\n  }\n\n  githubAuthorizeUrl() {\n    return \"https://github.com/login/oauth/authorize\";\n  }\n}\n\nexport async function login(email: string, password: string, db: Db) {\n  const user = await db.users.findByEmail(email);\n  if (!user || user.passwordHash !== hash(password)) {\n    const error = new Error(\"Email or password is incorrect.\");\n    (error as Error & { status: number }).status = 401;\n    throw error;\n  }\n  return createSession(user.id, db);\n}\n\nexport function invalidCredentials() {\n  return { status: 401, error: \"Email or password is incorrect.\" };\n}\n\nexport async function createSession(userId: string, db: Db) {\n  const id = crypto.randomUUID();\n  await db.sessions.insert({ id, userId });\n  return { id, userId };\n}\n\nexport type Session = { id: string; userId: string };\n\nfunction hash(value: string) {\n  return value;\n}\n\ninterface Db {\n  users: { findByEmail(email: string): Promise<{ id: string; passwordHash: string } | null> };\n  sessions: { insert(row: { id: string; userId: string }): Promise<void> };\n}",
+    "src/controllers/ProjectController.ts": "export async function create(name: string, service: ProjectService) {\n  return service.create(name);\n}\n\nexport async function list(query: string, service: ProjectService) {\n  return service.list(query);\n}\n\ninterface ProjectService {\n  create(name: string): Promise<{ id: string }>;\n  list(query: string): Promise<unknown[]>;\n}",
+    "src/services/project.ts": "export class ProjectService {\n  constructor(private readonly db: ProjectDb) {}\n\n  create(name: string) {\n    return insertProject(this.db, name);\n  }\n\n  list(query: string) {\n    return this.db.projects.search(query);\n  }\n\n  summarize(projectId: string) {\n    return summarizeProject(this.db, projectId);\n  }\n}\n\nexport async function insertProject(db: ProjectDb, name: string) {\n  const slug = name.trim().toLowerCase().replaceAll(\" \", \"-\");\n  const existing = await db.projects.findBySlug(slug);\n  if (existing) {\n    const error = new Error(\"A project with that name already exists.\");\n    (error as Error & { status: number }).status = 409;\n    throw error;\n  }\n  return db.projects.insert({ name, slug });\n}\n\nexport function duplicateProjectName() {\n  return { status: 409, error: \"A project with that name already exists.\" };\n}\n\nexport async function listProjects(db: ProjectDb, query: string) {\n  return db.projects.search(query);\n}\n\nexport async function summarizeProject(db: ProjectDb, projectId: string) {\n  const project = await db.projects.find(projectId);\n  const response = await fetch(\"https://api.openai.com/v1/chat/completions\", {\n    method: \"POST\",\n    body: JSON.stringify({\n      model: \"gpt-4o-mini\",\n      messages: [{ role: \"user\", content: `Summarize ${project.name}` }],\n    }),\n  });\n  const payload = (await response.json()) as { summary?: string };\n  return payload.summary ?? \"\";\n}\n\ninterface ProjectDb {\n  projects: {\n    findBySlug(slug: string): Promise<{ id: string } | null>;\n    find(id: string): Promise<{ name: string }>;\n    insert(row: { name: string; slug: string }): Promise<{ id: string }>;\n    search(query: string): Promise<unknown[]>;\n  };\n}",
+    "src/services/checkout.ts": "export class CheckoutService {\n  createSubscription(plan: string, userId: string) {\n    return startSubscription(plan, userId);\n  }\n}\n\nexport async function startSubscription(plan: string, userId: string, db: BillingDb) {\n  const stripeSubscription = await stripe.subscriptions.create({\n    customer: userId,\n    items: [{ price: plan }],\n  });\n  if (stripeSubscription.status === \"incomplete\") {\n    const error = new Error(\"The card was declined.\");\n    (error as Error & { status: number }).status = 402;\n    throw error;\n  }\n  return db.subscriptions.insert({\n    userId,\n    plan,\n    stripeSubscriptionId: stripeSubscription.id,\n    status: stripeSubscription.status,\n  });\n}\n\nexport function paymentDeclined() {\n  return { status: 402, error: \"The card was declined.\" };\n}\n\nconst stripe = {\n  subscriptions: {\n    create(_input: { customer: string; items: Array<{ price: string }> }) {\n      return Promise.resolve({ id: \"sub_123\", status: \"active\" });\n    },\n  },\n};\n\ninterface BillingDb {\n  subscriptions: {\n    insert(row: {\n      userId: string;\n      plan: string;\n      stripeSubscriptionId: string;\n      status: string;\n    }): Promise<{ subscriptionId: string }>;\n  };\n}",
+    "src/services/user.ts": "export class UserService {\n  updateProfile(userId: string, name: string) {\n    return writeProfile(userId, name);\n  }\n\n  storeAvatar(userId: string, file: File) {\n    return writeAvatar(userId, file);\n  }\n}\n\nexport async function writeProfile(userId: string, name: string, db: UserDb) {\n  await db.users.update({ id: userId, name });\n}\n\nexport async function writeAvatar(userId: string, file: File) {\n  const key = `avatars/${userId}`;\n  await s3.putObject({ bucket: \"harbor-avatars\", key, body: file });\n}\n\nconst s3 = {\n  putObject(_input: { bucket: string; key: string; body: File }) {\n    return Promise.resolve();\n  },\n};\n\ninterface UserDb {\n  users: { update(row: { id: string; name: string }): Promise<void> };\n}",
+    "src/db/schema.sql": "-- Harbor primary database.\n\ncreate table users (\n  id uuid primary key,\n  email text not null unique,\n  name text not null,\n  password_hash text not null,\n  avatar_url text\n);\n\ncreate table sessions (\n  id uuid primary key,\n  user_id uuid not null references users (id),\n  created_at timestamptz not null default now()\n);\n\ncreate table projects (\n  id uuid primary key,\n  owner_id uuid not null references users (id),\n  name text not null,\n  slug text not null unique\n);\n\ncreate table project_members (\n  project_id uuid not null references projects (id),\n  user_id uuid not null references users (id),\n  primary key (project_id, user_id)\n);\n\ncreate table subscriptions (\n  id uuid primary key,\n  user_id uuid not null references users (id),\n  stripe_customer_id text not null,\n  stripe_subscription_id text,\n  plan text not null,\n  status text not null\n);"
+  }
+}
