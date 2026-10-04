@@ -24,7 +24,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. The map starts on the Harbor sample. Paste `https://github.com/owner/repo` into Analyze to replace it. Sample switches back. Vite proxies `/api` to the backend.
+Open http://127.0.0.1:5173 and paste `https://github.com/owner/repo` (or just `owner/repo`). The address bar keeps `?project=<id>`, so a refresh reopens the same analysis while the backend still holds it. **Open the example map** loads the hand-written Harbor sample (`?sample=1`), labelled as not analyzed. Vite proxies `/api` to the backend.
 
 ```bash
 cd backend && npm test && npm run build
@@ -53,9 +53,18 @@ Clones are shallow, public, and stored under the system temp directory (`workflo
 GitHub (or a local directory)
   → backend/src/analyzer.ts
   → application graph JSON
-  → frontend map (unchanged canvas)
+  → frontend map (three lanes: user experience → application → data & services)
   → POST /api/grok/explain
 ```
+
+### Frontend map
+
+The first screen is the whole architecture, laid out top to bottom in three lanes by node type (`frontend/src/graph/lanes.ts`). Positions come from ELK with the lanes as partitions (`frontend/src/layout/laneLayout.ts`); nodes with no recorded edge are packed in a grid beside their lane's flow. Pages start open unless the app has more than 20 page children.
+
+- Hover a node to see its direct connections. Click it to highlight its whole path and open the inspector beside the map.
+- **Trace flow** walks that path step by step (`traceFor` in `frontend/src/graph/path.ts`), following only edges already in the highlight. A user flow from the analyzer plays its own story order.
+- The inspector, **View source** (`/api/source`, with line numbers and highlighting) and **Explain this** (`/api/grok/explain`) open beside the map; nothing navigates away from it.
+- Every box and line is analyzer output. Unknown facts read "Not detected". A collapsed page draws its children's edges from the page, dotted.
 
 Later, without changing this shape:
 

@@ -1,11 +1,11 @@
 import { GraphIndex } from "../src/graph/indexGraph.ts";
+import { laneIndex } from "../src/graph/lanes.ts";
+import { highlightFor, traceFor } from "../src/graph/path.ts";
 import { buildSampleGraph } from "../src/graph/sampleGraph.ts";
-import { NODE_TYPES } from "../src/graph/types.ts";
-import { visibleNodeIds } from "../src/graph/visibility.ts";
-import { highlightFor } from "../src/graph/path.ts";
 import { searchGraph } from "../src/graph/search.ts";
-import { absolutePosition, layoutVisible } from "../src/layout/elkLayout.ts";
-import { DEFAULT_FILTERS } from "../src/graph/visibility.ts";
+import { NODE_TYPES } from "../src/graph/types.ts";
+import { defaultCollapsed, visibleNodeIds } from "../src/graph/visibility.ts";
+import { absolutePosition, layoutLanes } from "../src/layout/laneLayout.ts";
 
 const graph = buildSampleGraph();
 const index = new GraphIndex(graph);
@@ -48,70 +48,72 @@ if (stripeHits[0]?.usedBy.length === 0) {
   throw new Error("Stripe search result has no used-by preview.");
 }
 
-const overview = visibleNodeIds(index, {
-  depth: "overview",
-  focusId: null,
-  flowId: null,
-  pinned: [],
-  filters: DEFAULT_FILTERS,
-});
-if (overview.size !== 7) {
-  throw new Error(`Overview should be the 7 pages, got ${overview.size}.`);
+// The overview is the whole architecture, not just pages.
+const collapsed = defaultCollapsed(index);
+if (!collapsed.has("page-projects")) {
+  throw new Error("A sample this size should start with its pages collapsed.");
+}
+const overview = visibleNodeIds(index, { collapsed, focusId: null });
+for (const id of ["page-projects", "api-projects-create", "fn-project-create", "db-postgres", "ext-stripe"]) {
+  if (!overview.has(id)) throw new Error(`Overview is missing ${id}.`);
+}
+if (overview.has("ix-create")) throw new Error("A collapsed page should hide its interactions.");
+if ([...overview].some((id) => index.node(id).type === "application")) {
+  throw new Error("The application node is the map header, not a box on the map.");
+}
+if ([...overview].some((id) => index.node(id).type === "file")) {
+  throw new Error("Source files belong in the inspector until one is selected.");
 }
 
-const projectsOpen = visibleNodeIds(index, {
-  depth: "page",
-  focusId: "page-projects",
-  flowId: null,
-  pinned: ["page-projects"],
-  filters: DEFAULT_FILTERS,
-});
-if (!projectsOpen.has("ix-create")) {
-  throw new Error("Opening Projects does not reveal Create Project.");
-}
-if (projectsOpen.has("api-projects-create")) {
-  throw new Error("Opening a page should not reveal its API chain.");
-}
+const expanded = visibleNodeIds(index, { collapsed: new Set(), focusId: null });
+if (!expanded.has("ix-create")) throw new Error("An open page should show Create Project.");
 
-const chain = visibleNodeIds(index, {
-  depth: "chain",
-  focusId: "ix-create",
-  flowId: null,
-  pinned: ["ix-create", "page-projects"],
-  filters: DEFAULT_FILTERS,
-});
-for (const id of ["ix-create", "api-projects-create", "fn-project-create", "table-projects", "db-postgres"]) {
-  if (!chain.has(id)) throw new Error(`Visible create chain is missing ${id}.`);
-}
-if (!chain.has("file-create-btn")) {
-  throw new Error("Focusing Create Project should reveal its source file.");
-}
+const fileFocus = visibleNodeIds(index, { collapsed, focusId: "file-create-btn" });
+if (!fileFocus.has("file-create-btn")) throw new Error("A selected source file should appear on the map.");
 
 const highlight = highlightFor(index, "ix-create", null);
 if (!highlight?.nodes.has("api-projects-create") || !highlight.nodes.has("page-dashboard")) {
   throw new Error("Create Project highlight should include the API and the dashboard.");
 }
 
-await layoutAndCheck("overview", overview);
-await layoutAndCheck("projects", projectsOpen);
-await layoutAndCheck("create", chain);
-
-const stripeView = visibleNodeIds(index, {
-  depth: "chain",
-  focusId: "ext-stripe",
-  flowId: null,
-  pinned: ["ext-stripe"],
-  filters: DEFAULT_FILTERS,
-});
-if (!stripeView.has("ix-subscribe") || !stripeView.has("fn-checkout")) {
-  throw new Error("Focusing Stripe should reveal the checkout path that calls it.");
+const pageHighlight = highlightFor(index, "page-projects", null);
+if (!pageHighlight?.nodes.has("api-projects-create")) {
+  throw new Error("Selecting a page should trace what its interactions call.");
 }
-await layoutAndCheck("stripe", stripeView);
+
+// Every edge in a highlight is a recorded edge between highlighted nodes.
+for (const focus of ["ix-create", "page-projects", "ext-stripe", "fn-project-create"]) {
+  const path = highlightFor(index, focus, null);
+  if (!path) throw new Error(`No highlight for ${focus}.`);
+  for (const id of path.edges) {
+    const edge = index.edge(id);
+    if (!edge) throw new Error(`${focus}: highlight names missing edge ${id}.`);
+    if (!path.nodes.has(edge.source) || !path.nodes.has(edge.target)) {
+      throw new Error(`${focus}: highlighted edge ${id} leaves the highlight.`);
+    }
+  }
+}
+
+const trace = traceFor(index, "ix-create", null).map((step) => step.join(","));
+const at = (id: string) => trace.findIndex((step) => step.split(",").includes(id));
+if (at("ix-create") < 0 || at("api-projects-create") <= at("ix-create")) {
+  throw new Error(`Trace should reach the API after Create Project: ${trace.join(" | ")}`);
+}
+if (at("fn-project-create") <= at("api-projects-create") || at("table-projects") <= at("fn-project-create")) {
+  throw new Error(`Trace order is wrong: ${trace.join(" | ")}`);
+}
+
+const flowTrace = traceFor(index, null, graph.flows[0]?.id ?? null);
+if (flowTrace.length === 0) throw new Error("A flow should produce a trace.");
+
+await layoutAndCheck("overview", overview);
+await layoutAndCheck("expanded", expanded);
+await layoutAndCheck("file focus", fileFocus);
 
 console.log("Sample graph and layouts ok.");
 
 async function layoutAndCheck(label: string, visible: Set<string>): Promise<void> {
-  const laid = await layoutVisible(index, visible);
+  const laid = await layoutLanes(index, visible);
   const positions = new Map(laid.nodes.map((node) => [node.id, node]));
   const absolute = new Map<string, { x: number; y: number; width: number; height: number }>();
   for (const id of visible) {
@@ -119,6 +121,22 @@ async function layoutAndCheck(label: string, visible: Set<string>): Promise<void
     if (!box) throw new Error(`${label}: ${id} has no position.`);
     absolute.set(id, box);
   }
+
+  // Lanes read top to bottom: experience, application, data.
+  const tops = laid.lanes.map((lane) => lane.y);
+  for (let i = 1; i < tops.length; i += 1) {
+    if ((tops[i] ?? 0) <= (tops[i - 1] ?? 0)) throw new Error(`${label}: lanes are out of order.`);
+  }
+  for (const [id, box] of absolute) {
+    const node = index.node(id);
+    const lane = laid.lanes[laneIndex(node.type)];
+    const top = positions.get(id)?.parentId ? absolute.get(positions.get(id)?.parentId ?? "") : box;
+    if (!lane || !top) continue;
+    if (top.y < lane.y || top.y + top.height > lane.y + lane.height) {
+      throw new Error(`${label}: ${id} sits outside the ${lane.id} lane.`);
+    }
+  }
+
   const ids = [...absolute.keys()];
   for (let i = 0; i < ids.length; i += 1) {
     for (let j = i + 1; j < ids.length; j += 1) {
