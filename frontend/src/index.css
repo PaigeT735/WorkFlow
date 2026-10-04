@@ -648,7 +648,7 @@ a.repo-link:hover { color: var(--text); }
   position: absolute;
   top: 24px;
   left: 28px;
-  width: 152px;
+  width: 168px;
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 8px;
@@ -716,7 +716,7 @@ a.repo-link:hover { color: var(--text); }
   color: var(--text);
   line-height: 1.25;
 }
-.mnode-title.mono { font-size: 12.75px; }
+.mnode-title.mono { font-size: 12px; letter-spacing: -0.01em; }
 .mnode-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mnode-meta {
   overflow: hidden;
