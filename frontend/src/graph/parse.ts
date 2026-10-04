@@ -9,6 +9,7 @@ import {
   type GraphEdge,
   type GraphNode,
   type NodeMetadata,
+  type RuntimeEvidence,
   type SourceRef,
 } from "./types.ts";
 
@@ -87,6 +88,9 @@ function parseNode(value: unknown, path: string): GraphNode {
   }
   if ("metadata" in record && record.metadata != null) {
     node.metadata = parseMetadata(record.metadata, `${path}.metadata`);
+  }
+  if ("runtime" in record && record.runtime != null) {
+    node.runtime = parseRuntime(record.runtime, `${path}.runtime`);
   }
   return node;
 }
@@ -170,6 +174,26 @@ function parseMetadata(value: unknown, path: string): NodeMetadata {
     metadata.statusCode = asNumber(record.statusCode, `${path}.statusCode`);
   }
   return metadata;
+}
+
+function parseRuntime(value: unknown, path: string): RuntimeEvidence {
+  const record = asRecord(value, path);
+  const runtime: RuntimeEvidence = {
+    observed: asBoolean(record.observed, `${path}.observed`),
+  };
+  if ("requestCount" in record && record.requestCount != null) {
+    runtime.requestCount = asNumber(record.requestCount, `${path}.requestCount`);
+  }
+  if ("errorCount" in record && record.errorCount != null) {
+    runtime.errorCount = asNumber(record.errorCount, `${path}.errorCount`);
+  }
+  if ("avgDuration" in record && record.avgDuration != null) {
+    runtime.avgDuration = asNumber(record.avgDuration, `${path}.avgDuration`);
+  }
+  if ("lastSeen" in record && record.lastSeen != null) {
+    runtime.lastSeen = asString(record.lastSeen, `${path}.lastSeen`);
+  }
+  return runtime;
 }
 
 function parseSources(value: unknown): Record<string, string> {

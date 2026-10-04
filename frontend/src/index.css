@@ -197,6 +197,14 @@ button { cursor: pointer; }
   color: var(--text-faint);
   font-size: 11px;
   white-space: nowrap;
+  flex: none;
+}
+
+.rel-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hit-used, .flow-detail {
@@ -228,6 +236,34 @@ button { cursor: pointer; }
   font-size: 13px;
   color: var(--text-dim);
 }
+
+.repo-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.repo-input {
+  width: 240px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #0c0e12;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.analyze-banner {
+  margin: 0;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.analyze-banner.is-error { color: var(--c-error); }
 
 .stage {
   position: relative;
@@ -278,6 +314,7 @@ button { cursor: pointer; }
   padding: 0 12px;
 }
 
+.map-node[data-type="application"],
 .map-node[data-type="page"], .map-cluster[data-type="page"] { --type: var(--c-page); }
 .map-node[data-type="component"] { --type: var(--c-component); }
 .map-node[data-type="interaction"] { --type: var(--c-interaction); }
@@ -477,6 +514,15 @@ button { cursor: pointer; }
   gap: 2px;
   margin: 8px 0;
   font-size: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.file-path {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .file-label { color: var(--text-faint); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
@@ -488,6 +534,10 @@ button { cursor: pointer; }
 }
 
 .auth-line.is-required { color: var(--c-auth); }
+
+.rel-section { min-width: 0; }
+
+.rel-section button { min-width: 0; }
 
 .rel-section h3 {
   margin: 12px 0 4px;
@@ -562,6 +612,7 @@ button { cursor: pointer; }
 @media (max-width: 860px) {
   .density { display: none; }
   .search { width: 140px; }
+  .repo-input { width: 140px; }
   .side-panel { width: min(332px, 100%); }
   .source-drawer { right: 10px; height: 220px; }
 }

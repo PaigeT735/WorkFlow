@@ -1,6 +1,7 @@
 import type { EdgeKind, Layer, NodeType } from "./types.ts";
 
 export const TYPE_LABEL: Record<NodeType, string> = {
+  application: "Application",
   page: "Page",
   component: "Component",
   interaction: "Interaction",

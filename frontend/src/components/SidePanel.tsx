@@ -92,7 +92,10 @@ function NodeBody({ index, node }: { index: GraphIndex; node: GraphNode }) {
       {node.source ? (
         <p className="file-line">
           <span className="file-label">File</span>
-          <span className="mono">
+          <span
+            className="mono file-path"
+            title={`${node.source.file}:${node.source.startLine}–${node.source.endLine}`}
+          >
             {node.source.file}:{node.source.startLine}–{node.source.endLine}
           </span>
         </p>
@@ -164,9 +167,9 @@ function RelationList({ title, rows }: { title: string; rows: Relation[] }) {
       <ul>
         {rows.map((row) => (
           <li key={row.key}>
-            <button type="button" onClick={() => map.selectNode(row.nodeId)}>
+            <button type="button" title={row.label} onClick={() => map.selectNode(row.nodeId)}>
               <span className="verb">{row.verb}</span>
-              <span>{row.label}</span>
+              <span className="rel-label">{row.label}</span>
             </button>
           </li>
         ))}
@@ -194,12 +197,19 @@ function GrokActions({ node, flow }: { node: GraphNode | null; flow: Flow | null
     setText(null);
     try {
       const request = buildGrokRequest(map.index, action, map.focusId, flow ? map.flowId : null);
+      if (map.projectId) request.projectId = map.projectId;
       const response = await explainWithGrok(request, controller.signal);
       setText(response.explanation);
       setStatus("done");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      if (error instanceof GrokUnavailableError || error instanceof Error) {
+      if (error instanceof GrokUnavailableError) {
+        setText(error.message);
+        setStatus("unavailable");
+        return;
+      }
+      if (error instanceof Error) {
+        setText(error.message);
         setStatus("unavailable");
       }
     }
@@ -221,8 +231,8 @@ function GrokActions({ node, flow }: { node: GraphNode | null; flow: Flow | null
       ))}
       {status === "unavailable" ? (
         <p className="grok-note" role="status">
-          The analysis backend isn’t running, so this can’t be answered yet. The selected node and
-          its path are ready for <span className="mono">POST /api/grok/explain</span>.
+          {text ??
+            "The analysis backend isn’t running, so this can’t be answered yet. The selected node and its path are ready for POST /api/grok/explain."}
         </p>
       ) : null}
       {status === "done" && text ? (

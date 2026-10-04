@@ -1,27 +1,22 @@
 # WorkFlow
 
-AI-powered application execution mapping and debugging.
+Give WorkFlow a repository and it reconstructs how the application works, then shows that on one map.
 
-## Architecture
+GitHub repository → analyzer → application graph JSON → existing map → contextual Grok explanation.
 
-Application
-→ Bronto telemetry
-→ WorkFlow backend
-→ Grok reasoning
-→ Interactive application map
+Runtime telemetry (Bronto) is prepared for later. It is not attached, and the analyzer never invents runtime counts.
 
-## Structure
+## Run locally
 
-- `frontend/` — visual application map
-- `backend/` — Bronto + Grok integration
-- `backend/src/bronto.ts` — Bronto MCP integration
-- `backend/src/grok.ts` — Grok integration
-- `backend/src/analyzer.ts` — telemetry analysis (emits the graph JSON below)
-- `backend/src/server.ts` — backend server
+From the repo root, put keys in `.env` (names are in `.env.example`). The backend loads `backend/.env` and then the repo-root `.env`. The frontend never reads them.
 
-The map is the product. Pages, calls, auth, services, databases, and external services are depths of one canvas, not separate screens.
+```bash
+cd backend
+npm install
+npm run dev
+```
 
-## Run the frontend
+The API listens on http://127.0.0.1:8787 (`PORT` overrides it).
 
 ```bash
 cd frontend
@@ -29,117 +24,173 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (http://localhost:5173). The first screen is the map of the sample app, Harbor.
+Open http://127.0.0.1:5173. The map starts on the Harbor sample. Paste `https://github.com/owner/repo` into Analyze to replace it. Sample switches back. Vite proxies `/api` to the backend.
 
 ```bash
-npm run typecheck
-npm run build
+cd backend && npm test && npm run build
+cd frontend && npm test && npm run build
 ```
 
-`npm run dev` and `npm run build` regenerate `frontend/public/graph.json` from `frontend/src/graph/sampleGraph.ts` and check that the sample still lays out.
+`npm run bronto:test` (from `backend/`) is the Bronto connection check. It prints tool names only.
 
-API keys stay in the repo-root `.env` for the backend. The frontend never reads them and never calls Grok directly.
+To analyze a directory on this machine, start the backend with `WORKFLOW_ALLOW_LOCAL=1`. The fixture used by the tests is `backend/test/fixtures/sample-saas`.
 
-## Graph document
+## Analyze a GitHub repo
 
-`loadApplicationGraph()` in `frontend/src/graph/loadGraph.ts` is the only reader.
+```bash
+curl -s -X POST http://127.0.0.1:8787/api/analyze \
+  -H 'Content-Type: application/json' \
+  -d '{"repository":"https://github.com/owner/repo"}'
+```
 
-- Default: `GET /graph.json` (the Harbor sample).
-- Later: set `VITE_GRAPH_URL` to the analyzer, for example `/api/graph`. The canvas does not change.
+The response includes `projectId` and `graphUrl`. The map loads `GET /api/projects/:id/graph`. View Source for an analyzed project calls `GET /api/source`. Harbor keeps its built-in excerpts.
 
-The Vite dev server proxies `/api` to `http://127.0.0.1:8787`. The TypeScript types in `frontend/src/graph/types.ts` are the contract. `schemaVersion` is `1`.
+Clones are shallow, public, and stored under the system temp directory (`workflow-projects/<id>/repo`) for about six hours so source view keeps working. They are not committed. A `GITHUB_TOKEN` in the server environment can be added later for private clones; it is never sent to the browser or written into the graph.
+
+## Architecture
+
+```
+GitHub (or a local directory)
+  → backend/src/analyzer.ts
+  → application graph JSON
+  → frontend map (unchanged canvas)
+  → POST /api/grok/explain
+```
+
+Later, without changing this shape:
+
+```
+Static analyzer → expected graph ← runtime telemetry ← Bronto
+```
+
+Nodes may carry `runtime: { observed, requestCount?, errorCount?, avgDuration?, lastSeen? }` only after a real telemetry pass. Nothing in this milestone sets it.
+
+## Graph schema
+
+`schemaVersion` is `1`. The TypeScript contracts are `frontend/src/graph/types.ts` and `backend/src/graphTypes.ts`. `loadApplicationGraph()` in `frontend/src/graph/loadGraph.ts` is the only reader. Analyzer output is fetched from `GET /api/projects/:id/graph`. Harbor remains `GET /graph.json`.
 
 ```json
 {
   "schemaVersion": 1,
-  "id": "harbor",
-  "name": "Harbor",
+  "id": "sample-saas",
+  "name": "sample-saas",
   "description": "optional",
   "nodes": [],
   "edges": [],
-  "flows": [],
-  "sources": {
-    "src/services/project.ts": "file text used by View Source"
-  }
+  "flows": []
 }
 ```
+
+`sources` is optional. Harbor embeds excerpts. Analyzed graphs omit them; View Source reads the file from `GET /api/source`.
 
 ### Nodes
 
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `id` | yes | Stable id, no whitespace |
-| `type` | yes | `page`, `component`, `interaction`, `api`, `auth`, `service`, `function`, `database`, `table`, `external`, `error`, `file` |
-| `layer` | yes | Must match the type. See the table below |
-| `parentId` | yes | Container id, or `null` |
+| `type` | yes | `application`, `page`, `component`, `interaction`, `api`, `auth`, `service`, `function`, `database`, `table`, `external`, `error`, `file` |
+| `layer` | yes | Must match the type |
+| `parentId` | yes | Container id, or `null`. Pages stay `null` so the overview can show them |
 | `label` | yes | Name drawn on the node |
-| `summary` | no | Second line: route, file, role |
-| `detail` | no | One sentence for the side panel |
-| `source` | no | `{ "file", "startLine", "endLine" }`, lines 1-based and inclusive |
+| `summary` | no | Second line |
+| `detail` | no | One sentence in the side panel |
+| `source` | no | `{ "file", "startLine", "endLine" }`, 1-based and inclusive |
 | `metadata` | no | `route`, `method`, `path`, `authRequired`, `errorMessage`, `statusCode` |
-
-If `parentId` is set, also emit a `contains` edge from the parent to the child. The map nests the child and does not draw that edge.
+| `runtime` | no | Bronto evidence only. Never fabricated |
 
 | Type | Layer |
 | --- | --- |
-| `page`, `component` | `surface` |
+| `application`, `page`, `component` | `surface` |
 | `interaction`, `api`, `auth`, `error` | `behavior` |
 | `service`, `function`, `file` | `backend` |
 | `database`, `table` | `data` |
 | `external` | `external` |
 
+If `parentId` is set, also emit a `contains` edge from the parent. The map nests children of pages and databases. The application node `contains` each page, but pages keep `parentId: null` so the first screen stays the page overview.
+
 ### Edges
 
-```json
-{
-  "id": "e-ix-create-calls-api-projects-create",
-  "source": "ix-create",
-  "target": "api-projects-create",
-  "kind": "calls",
-  "label": "calls"
-}
-```
+`kind` is `contains`, `navigates_to`, `calls`, `authenticates`, `handles`, `queries`, `reads`, `writes`, `sends_payment_to`, `depends_on`, `raises`, or `defined_in`.
 
-`kind` is one of `contains`, `navigates_to`, `calls`, `authenticates`, `handles`, `queries`, `reads`, `writes`, `sends_payment_to`, `depends_on`, `raises`, `defined_in`.
+The words on the edge are `label`. These brief names map onto those kinds:
 
-`label` is the words on the edge (`navigates to`, `authentication required`, `sends payment to`, …).
+| Brief | Stored kind | Typical label |
+| --- | --- | --- |
+| contains, renders | `contains` | contains |
+| navigates | `navigates_to` | navigates to |
+| triggers | `calls` | triggers |
+| calls | `calls` | calls |
+| authenticates | `authenticates` | authentication required |
+| handled_by | `handles` | handles |
+| queries | `queries` | queries |
+| writes | `writes` | writes |
+| uses | `depends_on` | depends on |
+| integrates_with | `depends_on` or `sends_payment_to` | integrates with, or sends payment to |
+| throws | `raises` | raises |
 
-`expand` defaults to true. Chain expansion follows the edge. Set `expand` to false for a real link into a shared node when following it would pull unrelated callers onto the map. The edge is still drawn when both ends are visible, and it still appears in the side panel.
-
-`skeleton` marks a page-to-page overview edge (Login authenticates Dashboard). It is hidden once a more specific edge between the same nodes is on screen.
+`expand` defaults to true. Set it to false on a link that should stay in the side panel without pulling an unrelated chain onto the map. `defined_in` edges use that. `skeleton` marks a page-to-page overview edge.
 
 ### Flows
 
+`nodeIds` are in story order. `edgeIds` may be empty. The Create Project flow from the fixture is:
+
+Application → Dashboard → Create Project → POST /api/projects → Require auth → ProjectController.create → ProjectService → ProjectService.create() → projects
+
+## HTTP API
+
+All error bodies are `{ "error": "..." }`.
+
+### `POST /api/analyze`
+
+```json
+{ "repository": "https://github.com/owner/repo" }
+```
+
+`https://github.com/<owner>/<repo>` only (optional `.git`). With `WORKFLOW_ALLOW_LOCAL=1`, an absolute directory path is also accepted. The clone is unauthenticated unless `GITHUB_TOKEN` is set on the server.
+
 ```json
 {
-  "id": "flow-create-project",
-  "label": "Create a project",
-  "description": "optional",
-  "nodeIds": ["page-projects", "ix-create", "api-projects-create"],
-  "edgeIds": ["e-ix-create-calls-api-projects-create"]
+  "projectId": "ab12cd34ef56ab78",
+  "name": "sample-saas",
+  "repository": "https://github.com/owner/repo",
+  "graphUrl": "/api/projects/ab12cd34ef56ab78/graph",
+  "summary": {
+    "filesAnalyzed": 7,
+    "filesSkipped": 1,
+    "nodeCount": 13,
+    "edgeCount": 13,
+    "warnings": ["Skipped src/broken.tsx because it did not parse."]
+  }
 }
 ```
 
-`nodeIds` are in story order. `edgeIds` may be empty; the map then highlights every non-contains edge whose ends are both in the flow.
+Invalid URLs, missing repos, clone failures, empty repos, and oversized inputs return 4xx or 502. One malformed file is skipped and listed in `warnings`. It does not fail the analysis.
 
-### Source excerpts
+### `GET /api/projects/:id/graph`
 
-`sources` is optional and keyed by the same repo-relative path as `source.file`. View Source slices `[startLine, endLine]`. Without an excerpt the panel still shows the path and range.
+The graph document above. Unknown or expired ids return 404. Projects live in memory and expire about six hours after analysis.
 
-## Grok
+### `GET /api/source?project=<id>&path=<repo-relative>`
 
-Contextual actions post graph context to the backend. The browser does not call Grok and does not send API keys.
+```json
+{ "path": "src/server/ProjectService.ts", "content": "..." }
+```
 
-`POST /api/grok/explain`
+The path must stay inside the analyzed root after symlink resolution. `..`, absolute paths, and sensitive names (`.env`, `.env.*`, `credentials.*`, `secrets.*`, `*.pem`, `*.key`, and similar) are refused. Those files are also skipped during analysis, and env var values are never copied into the graph.
+
+### `POST /api/grok/explain`
+
+The browser sends graph context only. The server builds the prompt and, when `projectId` is set, reads the selected node's file range itself.
 
 ```json
 {
-  "action": "explain_api",
-  "promptLabel": "Explain this API",
+  "action": "explain_interaction",
+  "promptLabel": "Explain this interaction",
+  "projectId": "optional",
   "node": {},
   "context": {
-    "graphId": "harbor",
-    "graphName": "Harbor",
+    "graphId": "sample-saas",
+    "graphName": "sample-saas",
     "neighborhood": { "nodes": [], "edges": [] },
     "path": { "nodeIds": [], "edgeIds": [] },
     "flow": null
@@ -147,34 +198,37 @@ Contextual actions post graph context to the backend. The browser does not call 
 }
 ```
 
-`action` is `explain_page`, `explain_api`, `explain_interaction`, `explain_flow`, `why_failing`, `what_depends`, or `explain_node`.
+`action` is `explain_page`, `explain_api`, `explain_interaction`, `explain_flow`, `explain_node`, `why_failing`, `what_depends`, or `what_calls`.
 
-`node` is the selected graph node, or `null` when the selection is a flow.
+`200` is `{ "explanation": "..." }`. A missing `GROK_API_KEY`, or a failure from the xAI API, returns `{ "error": "..." }` and the side panel shows that message. The model defaults to `grok-4` and can be changed with `GROK_MODEL`. Calls go to `https://api.x.ai/v1/chat/completions`. The key is never logged, committed, or returned.
 
-`neighborhood` is the selection plus the nodes and edges on its highlighted path.
+The prompt lists the selected node, connected nodes, `A -> B (label)` relationships, and the source excerpt. The system instruction tells the model to use only that evidence, separate observation from inference, name real nodes and files, and not repeat secrets.
 
-`flow` is the selected flow, or `null`.
+### `GET /api/bronto/status`
 
-`200` response:
+`{ "connected": true, "tools": ["name"] }` or `{ "connected": false, "error": "..." }`. Tool names only. Credentials are not printed.
 
-```json
-{ "explanation": "Short explanation of this node in the map." }
-```
+## Analyzer coverage
 
-If the backend is down, the proxy fails, or the response is not that JSON, the side panel says the analysis backend is not running. The map stays usable.
+`analyzeRepository(directory)` in `backend/src/analyzer.ts` walks the tree (skipping `node_modules`, build output, and secret files) and parses TypeScript and JavaScript with the TypeScript compiler API. It records:
 
-Actions by node type:
+- An application node from `package.json` or the directory name
+- React Router `<Route path element>` and route objects, Next.js `app/` and `pages/` files, and `pages/*.tsx`
+- Components a page actually renders
+- Button and form actions (`onClick`, `onSubmit`) with a readable label
+- `fetch`, axios-style calls, and other client calls whose first argument is a path
+- Express and Fastify `method(path, ...handlers)`, including one `router` mount prefix, and Next.js route files
+- `requireAuth`-style middleware on those routes
+- `SomethingService.method()` calls from the handler
+- PostgreSQL (`pg`), Prisma, Drizzle, Sequelize, TypeORM, MongoDB, MySQL, SQLite, and Supabase, with a table only when a SQL string, Prisma model, or similar call names it
+- Stripe, OpenAI, S3, GitHub, Resend, Firebase, Clerk, NextAuth, and SendGrid from imports or env var **names**
 
-| Selection | Action |
-| --- | --- |
-| Page | What happens when users interact with this page? |
-| API | Explain this API |
-| Error | Why is this failing? |
-| Database or table | What depends on this? |
-| Interaction | Explain this interaction |
-| Flow | Explain this flow |
-| Anything else | Explain this |
+Every kept node that comes from a syntax node has a file and line range. A file that does not parse is skipped.
 
-## Sample
+## Fixture
 
-Harbor is a small team workspace: Landing, Login, Dashboard, Projects, Profile, Settings, and Checkout. Create Project runs through `POST /api/projects`, Require auth, ProjectController, ProjectService.create(), and the `projects` table. Login creates a session and opens the dashboard. Checkout sends payment to Stripe. GitHub, OpenAI, and Amazon S3 are the other external services.
+`backend/test/fixtures/sample-saas` is the Create Project demo: Dashboard renders Create Project Button, which `POST`s `/api/projects`, through `requireAuth`, `ProjectController.create`, `ProjectService.create()`, an `INSERT INTO projects`, and Stripe. `src/broken.tsx` is intentionally unparseable.
+
+## Secrets
+
+Do not commit `.env`, key files, or cloned repositories. Analysis and Grok prompts drop `.env` files and redact token-shaped strings. `backend/src/bronto.ts` redacts `BRONTO_API_KEY` from connection errors.

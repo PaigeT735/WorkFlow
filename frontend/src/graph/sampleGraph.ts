@@ -19,6 +19,13 @@ import {
 export function buildSampleGraph(): ApplicationGraph {
   const nodes: GraphNode[] = [
     n({
+      id: "app-harbor",
+      type: "application",
+      label: "Harbor",
+      summary: "Application",
+      detail: "Harbor, the sample team workspace. Pages below are the surfaces of this app.",
+    }),
+    n({
       id: "page-landing",
       type: "page",
       label: "Landing",

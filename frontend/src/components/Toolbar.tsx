@@ -243,6 +243,31 @@ export function Toolbar() {
       <button type="button" className="tool" data-testid="toolbar-reset" onClick={map.reset}>
         Reset
       </button>
+
+      <form
+        className="repo-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          const repository = String(data.get("repository") ?? "");
+          map.analyzeRepository(repository);
+        }}
+      >
+        <input
+          className="repo-input"
+          name="repository"
+          data-testid="repo-url"
+          placeholder="https://github.com/owner/repo"
+          aria-label="GitHub repository URL"
+          spellCheck={false}
+        />
+        <button type="submit" className="tool" data-testid="analyze-repo" disabled={map.analyzeState === "running"}>
+          {map.analyzeState === "running" ? "Analyzing…" : "Analyze"}
+        </button>
+        <button type="button" className="tool" data-testid="use-sample" onClick={map.useSample}>
+          Sample
+        </button>
+      </form>
     </header>
   );
 }

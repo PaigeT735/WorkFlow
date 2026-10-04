@@ -20,6 +20,7 @@ const nodeTypes = { card: CardNode, cluster: ClusterNode };
 const edgeTypes = { labeled: LabeledEdge };
 
 const TYPE_COLOR: Record<string, string> = {
+  application: "#8fb4d6",
   page: "#8fb4d6",
   component: "#a3adbd",
   interaction: "#d2b48a",

@@ -21,6 +21,11 @@ export function Shell() {
     <ReactFlowProvider>
       <div className="app-shell">
         <Toolbar />
+        {map.analyzeMessage ? (
+          <p className={map.analyzeState === "error" ? "analyze-banner is-error" : "analyze-banner"} role="status">
+            {map.analyzeMessage}
+          </p>
+        ) : null}
         <div className="stage">
           <MapCanvas />
           <FlowsPanel />

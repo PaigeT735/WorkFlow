@@ -52,6 +52,7 @@
 export const SCHEMA_VERSION = 1;
 
 export const NODE_TYPES = [
+  "application",
   "page",
   "component",
   "interaction",
@@ -97,6 +98,7 @@ export type EdgeKind = (typeof EDGE_KINDS)[number];
 
 /** Layer each node type belongs to. The parser rejects mismatches. */
 export const LAYER_FOR_TYPE: Record<NodeType, Layer> = {
+  application: "surface",
   page: "surface",
   component: "surface",
   interaction: "behavior",
@@ -118,6 +120,18 @@ export interface SourceRef {
   startLine: number;
   /** 1-based inclusive. */
   endLine: number;
+}
+
+/**
+ * Reserved for Bronto. The analyzer never fills this in and never invents
+ * counts. `observed` stays false until a telemetry pass attaches real data.
+ */
+export interface RuntimeEvidence {
+  observed: boolean;
+  requestCount?: number;
+  errorCount?: number;
+  avgDuration?: number;
+  lastSeen?: string;
 }
 
 export interface NodeMetadata {
@@ -148,6 +162,8 @@ export interface GraphNode {
   detail?: string;
   source?: SourceRef;
   metadata?: NodeMetadata;
+  /** Present only when runtime telemetry has actually been attached. */
+  runtime?: RuntimeEvidence;
 }
 
 export interface GraphEdge {
@@ -206,7 +222,7 @@ export interface GrokActionIdMap {
   explain_node: "explain_node";
 }
 
-export type GrokActionId = keyof GrokActionIdMap;
+export type GrokActionId = keyof GrokActionIdMap | "what_calls";
 
 /**
  * POST /api/grok/explain
@@ -216,6 +232,8 @@ export interface GrokExplainRequest {
   action: GrokActionId;
   /** The button label the user clicked, so the backend can phrase the prompt. */
   promptLabel: string;
+  /** Set when the map is showing an analyzed project, so the server can read source. */
+  projectId?: string;
   node: GraphNode | null;
   context: {
     graphId: string;

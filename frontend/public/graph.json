@@ -4,6 +4,15 @@
   "name": "Harbor",
   "nodes": [
     {
+      "id": "app-harbor",
+      "type": "application",
+      "layer": "surface",
+      "parentId": null,
+      "label": "Harbor",
+      "summary": "Application",
+      "detail": "Harbor, the sample team workspace. Pages below are the surfaces of this app."
+    },
+    {
       "id": "page-landing",
       "type": "page",
       "layer": "surface",

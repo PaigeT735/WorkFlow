@@ -27,7 +27,10 @@ export function actionsFor(node: GraphNode | null, flow: Flow | null): GrokActio
         },
       ];
     case "api":
-      return [{ id: "explain_api", label: "Explain this API" }];
+      return [
+        { id: "explain_api", label: "Explain this API" },
+        { id: "what_calls", label: "What calls this?" },
+      ];
     case "error":
       return [{ id: "why_failing", label: "Why is this failing?" }];
     case "database":
@@ -35,6 +38,13 @@ export function actionsFor(node: GraphNode | null, flow: Flow | null): GrokActio
       return [{ id: "what_depends", label: "What depends on this?" }];
     case "interaction":
       return [{ id: "explain_interaction", label: "Explain this interaction" }];
+    case "service":
+    case "function":
+      return [
+        { id: "explain_node", label: "Explain this" },
+        { id: "what_calls", label: "What calls this?" },
+        { id: "what_depends", label: "What depends on this?" },
+      ];
     default:
       return [{ id: "explain_node", label: "Explain this" }];
   }
@@ -88,8 +98,8 @@ export function buildGrokRequest(
 }
 
 export class GrokUnavailableError extends Error {
-  constructor() {
-    super("Analysis backend is not available.");
+  constructor(message = "Analysis backend is not available.") {
+    super(message);
     this.name = "GrokUnavailableError";
   }
 }
@@ -120,7 +130,7 @@ export async function explainWithGrok(
   }
 
   if (!response.ok) {
-    throw new GrokUnavailableError();
+    throw new GrokUnavailableError(await readError(response));
   }
 
   let body: unknown;
@@ -141,6 +151,19 @@ function isExplanation(value: unknown): value is GrokExplainResponse {
   if (value == null || typeof value !== "object") return false;
   const explanation = (value as { explanation?: unknown }).explanation;
   return typeof explanation === "string" && explanation.trim().length > 0;
+}
+
+async function readError(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json();
+    if (body != null && typeof body === "object" && "error" in body) {
+      const message = (body as { error?: unknown }).error;
+      if (typeof message === "string" && message.trim() !== "") return message;
+    }
+  } catch {
+    // The proxy or a crashed server may not return JSON.
+  }
+  return "Analysis backend is not available.";
 }
 
 function isAbort(error: unknown): boolean {

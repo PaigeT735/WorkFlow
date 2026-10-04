@@ -142,6 +142,7 @@ export function nodeAllowed(node: GraphNode, filters: Filters): boolean {
 
 function filterKey(type: NodeType): keyof Filters {
   switch (type) {
+    case "application":
     case "page":
     case "component":
     case "interaction":

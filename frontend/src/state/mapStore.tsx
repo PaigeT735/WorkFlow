@@ -89,22 +89,37 @@ interface MapContextValue {
   setSearchOpen: (open: boolean) => void;
   openSource: () => void;
   closeSource: () => void;
+  projectId: string | null;
+  analyzeState: "idle" | "running" | "error";
+  analyzeMessage: string | null;
+  analyzeRepository: (repository: string) => void;
+  useSample: () => void;
 }
 
 const MapContext = createContext<MapContextValue | null>(null);
 
 export function GraphProvider({ children }: { children: ReactNode }) {
   const [graph, setGraph] = useState<ApplicationGraph | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [analyzeState, setAnalyzeState] = useState<"idle" | "running" | "error">("idle");
+  const [analyzeMessage, setAnalyzeMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [view, setView] = useState<ViewState>(() => initialView());
   const viewRef = useRef(view);
   viewRef.current = view;
 
+  const applyGraph = useCallback((loaded: ApplicationGraph, nextProjectId: string | null) => {
+    setProjectId(nextProjectId);
+    setGraph(loaded);
+    setErrorMessage(null);
+    setView(initialView());
+  }, []);
+
   useEffect(() => {
     let cancel = false;
     loadApplicationGraph()
       .then((loaded) => {
-        if (!cancel) setGraph(loaded);
+        if (!cancel) applyGraph(loaded, null);
       })
       .catch((error: unknown) => {
         if (cancel) return;
@@ -113,7 +128,59 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     return () => {
       cancel = true;
     };
-  }, []);
+  }, [applyGraph]);
+
+  const analyzeRepository = useCallback((repository: string) => {
+    const trimmed = repository.trim();
+    if (!trimmed) {
+      setAnalyzeState("error");
+      setAnalyzeMessage("Enter a GitHub repository URL.");
+      return;
+    }
+    setAnalyzeState("running");
+    setAnalyzeMessage("Analyzing repository…");
+    void fetch("/api/analyze", {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ repository: trimmed }),
+    })
+      .then(async (response) => {
+        const body: unknown = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(messageFrom(body) ?? `Analyze failed (${response.status}).`);
+        }
+        const project = readProject(body);
+        if (!project) throw new Error("Analyze did not return a project id.");
+        const loaded = await loadApplicationGraph(project.graphUrl);
+        applyGraph(loaded, project.projectId);
+        const warning = project.warning;
+        setAnalyzeState("idle");
+        setAnalyzeMessage(
+          warning
+            ? `Showing ${loaded.name}. ${warning}`
+            : `Showing ${loaded.name} from the analyzed repository.`,
+        );
+      })
+      .catch((error: unknown) => {
+        setAnalyzeState("error");
+        setAnalyzeMessage(error instanceof Error ? error.message : "Could not analyze that repository.");
+      });
+  }, [applyGraph]);
+
+  const useSample = useCallback(() => {
+    setAnalyzeState("running");
+    setAnalyzeMessage(null);
+    loadApplicationGraph()
+      .then((loaded) => {
+        applyGraph(loaded, null);
+        setAnalyzeState("idle");
+        setAnalyzeMessage("Showing the Harbor sample.");
+      })
+      .catch((error: unknown) => {
+        setAnalyzeState("error");
+        setAnalyzeMessage(error instanceof Error ? error.message : "Could not load the sample.");
+      });
+  }, [applyGraph]);
 
   const index = useMemo(() => (graph ? new GraphIndex(graph) : null), [graph]);
 
@@ -443,6 +510,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       setSearchOpen,
       openSource,
       closeSource,
+      projectId,
+      analyzeState,
+      analyzeMessage,
+      analyzeRepository,
+      useSample,
     }),
     [
       errorMessage,
@@ -466,6 +538,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       setSearchOpen,
       openSource,
       closeSource,
+      projectId,
+      analyzeState,
+      analyzeMessage,
+      analyzeRepository,
+      useSample,
     ],
   );
 
@@ -478,6 +555,24 @@ export function useMap(): MapContextValue {
   const value = useContext(MapContext);
   if (!value) throw new Error("useMap must be used inside GraphProvider.");
   return value;
+}
+
+function messageFrom(body: unknown): string | null {
+  if (body == null || typeof body !== "object" || !("error" in body)) return null;
+  const message = (body as { error?: unknown }).error;
+  return typeof message === "string" && message.trim() !== "" ? message : null;
+}
+
+function readProject(body: unknown): { projectId: string; graphUrl: string; warning: string | null } | null {
+  if (body == null || typeof body !== "object") return null;
+  const record = body as { projectId?: unknown; graphUrl?: unknown; summary?: unknown };
+  if (typeof record.projectId !== "string" || typeof record.graphUrl !== "string") return null;
+  let warning: string | null = null;
+  if (record.summary != null && typeof record.summary === "object" && "warnings" in record.summary) {
+    const warnings = (record.summary as { warnings?: unknown }).warnings;
+    if (Array.isArray(warnings) && typeof warnings[0] === "string") warning = warnings[0];
+  }
+  return { projectId: record.projectId, graphUrl: record.graphUrl, warning };
 }
 
 function initialView(): ViewState {
