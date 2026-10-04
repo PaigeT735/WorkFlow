@@ -5,15 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/server.ts",
-    "build": "tsc"
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "test": "tsx --test test/**/*.test.ts",
+    "bronto:test": "tsx src/bronto-test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.0",
-    "dotenv": "^18.0.5"
+    "dotenv": "^18.0.5",
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
-    "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "tsx": "^4.23.15"
   }
 }
