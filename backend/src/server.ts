@@ -6,7 +6,7 @@ import { config as loadEnv } from "dotenv";
 import { connectToBronto } from "./bronto.js";
 import { explain, GrokError, type ExplainRequest } from "./grok.js";
 import { RepositoryError } from "./github.js";
-import { analyzeTarget, getProject, sweepExpired } from "./projectStore.js";
+import { analyzeTarget, discardProject, getProject, sweepExpired } from "./projectStore.js";
 import { readRepoFile, SourceAccessError } from "./sourceAccess.js";
 
 // Same load order as bronto.ts: backend/.env, then the repo-root .env.
@@ -50,6 +50,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     try {
       const project = await analyzeTarget(repository);
       if (project.report.filesAnalyzed === 0) {
+        await discardProject(project.id);
         send(res, 422, { error: "The repository has no supported source files to analyze." });
         return;
       }

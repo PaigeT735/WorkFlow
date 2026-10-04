@@ -110,7 +110,21 @@ function parseEdge(value: unknown, path: string): GraphEdge {
   if ("skeleton" in record && record.skeleton != null) {
     edge.skeleton = asBoolean(record.skeleton, `${path}.skeleton`);
   }
+  if ("metadata" in record && record.metadata != null) {
+    const metadata = parseEdgeMetadata(record.metadata, `${path}.metadata`);
+    if (metadata) edge.metadata = metadata;
+  }
   return edge;
+}
+
+function parseEdgeMetadata(
+  value: unknown,
+  path: string,
+): GraphEdge["metadata"] | undefined {
+  const record = asRecord(value, path);
+  if (!("evidence" in record) || record.evidence == null) return undefined;
+  const evidence = parseSourceRef(record.evidence, `${path}.evidence`);
+  return { evidence };
 }
 
 function parseFlow(value: unknown, path: string): Flow {

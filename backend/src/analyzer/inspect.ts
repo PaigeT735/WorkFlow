@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import * as ts from "typescript";
@@ -58,12 +59,15 @@ interface FileInfo {
   functions: Fn[];
   symbols: Map<string, SymbolRec>;
   imports: Map<string, ImportBinding>;
+  /** Object property name → local symbol that property refers to. */
+  namespaces: Map<string, Map<string, string>>;
   externals: Map<string, string>;
   database: string | null;
 }
 
 interface PageFact {
   route: string;
+  routes: string[];
   label: string;
   fn: Fn | null;
   span: Span;
@@ -159,13 +163,18 @@ function indexFiles(sources: SourceText[]): Map<string, FileInfo> {
       functions: [],
       symbols: new Map(),
       imports: new Map(),
+      namespaces: new Map(),
       externals: new Map(),
       database: null,
     });
   }
   for (const file of files.values()) {
     collectImports(file, files);
+    collectRequires(file, files);
     collectFunctions(file);
+    indexNamespaces(file);
+    bindWrappedDefaults(file);
+    bindDefaultAliases(file);
   }
   return files;
 }
@@ -216,6 +225,163 @@ function resolveSpecifier(from: string, specifier: string, files: Map<string, Fi
     if (files.has(candidate)) return candidate;
   }
   return null;
+}
+
+function collectRequires(file: FileInfo, files: Map<string, FileInfo>): void {
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer &&
+      ts.isCallExpression(node.initializer) &&
+      ts.isIdentifier(node.initializer.expression) &&
+      node.initializer.expression.text === "require"
+    ) {
+      const specNode = node.initializer.arguments[0];
+      const specifier = specNode && ts.isStringLiteral(specNode) ? specNode.text : null;
+      if (specifier && ts.isIdentifier(node.name)) {
+        file.imports.set(node.name.text, {
+          specifier,
+          imported: "default",
+          resolved: resolveSpecifier(file.path, specifier, files),
+        });
+      }
+      if (specifier && ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          if (!ts.isBindingElement(element) || !ts.isIdentifier(element.name)) continue;
+          const imported =
+            element.propertyName && ts.isIdentifier(element.propertyName)
+              ? element.propertyName.text
+              : element.name.text;
+          file.imports.set(element.name.text, {
+            specifier,
+            imported,
+            resolved: resolveSpecifier(file.path, specifier, files),
+          });
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file.source);
+}
+
+function indexNamespaces(file: FileInfo): void {
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isObjectLiteralExpression(node.initializer)
+    ) {
+      const props = namespaceProps(node.initializer);
+      if (props.size > 0) file.namespaces.set(node.name.text, props);
+    }
+    if (ts.isExportAssignment(node) && ts.isObjectLiteralExpression(node.expression)) {
+      const props = namespaceProps(node.expression);
+      if (props.size > 0) file.namespaces.set("default", props);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file.source);
+}
+
+function namespaceProps(object: ts.ObjectLiteralExpression): Map<string, string> {
+  const props = new Map<string, string>();
+  for (const prop of object.properties) {
+    if (ts.isShorthandPropertyAssignment(prop)) {
+      props.set(prop.name.text, prop.name.text);
+    } else if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.initializer)) {
+      const name = propertyNameText(prop.name);
+      if (name && !props.has(name)) props.set(name, prop.initializer.text);
+    }
+  }
+  return props;
+}
+
+function bindDefaultAliases(file: FileInfo): void {
+  for (const statement of file.source.statements) {
+    if (!ts.isExportAssignment(statement) || !ts.isIdentifier(statement.expression)) continue;
+    const name = statement.expression.text;
+    const symbol = file.symbols.get(name);
+    if (symbol && !file.symbols.has("default")) file.symbols.set("default", symbol);
+    const props = file.namespaces.get(name);
+    if (props && !file.namespaces.has("default")) file.namespaces.set("default", props);
+    if (!file.symbols.has("default") && !file.namespaces.has("default")) {
+      file.namespaces.set("default", new Map());
+    }
+  }
+}
+
+function bindWrappedDefaults(file: FileInfo): void {
+  for (const statement of file.source.statements) {
+    if (!ts.isExportAssignment(statement)) continue;
+    if (file.symbols.get("default")?.fn?.jsx) continue;
+    const fn = unwrapComponentExpression(file, statement.expression);
+    if (!fn?.jsx) continue;
+    const existing = file.symbols.get("default");
+    file.symbols.set("default", {
+      name: "default",
+      fn,
+      methods: existing?.methods ?? new Map(),
+    });
+  }
+}
+
+function unwrapComponentExpression(file: FileInfo, expression: ts.Expression, seen = new Set<string>()): Fn | null {
+  if (ts.isIdentifier(expression)) {
+    if (seen.has(expression.text)) return null;
+    seen.add(expression.text);
+    const named = file.symbols.get(expression.text)?.fn ?? null;
+    if (named?.jsx) return named;
+    return localAlias(file, expression.text, seen);
+  }
+  if (ts.isClassExpression(expression)) {
+    if (expression.name) return file.symbols.get(expression.name.text)?.fn ?? null;
+    return containsJsx(expression)
+      ? {
+          name: "Page",
+          qualified: "Page",
+          file: file.path,
+          node: expression,
+          body: expression,
+          span: spanOf(file.source, expression),
+          jsx: true,
+          isDefault: false,
+        }
+      : null;
+  }
+  if (ts.isCallExpression(expression)) {
+    const last = expression.arguments[expression.arguments.length - 1];
+    if (last && (ts.isIdentifier(last) || ts.isCallExpression(last) || ts.isClassExpression(last))) {
+      const inner = unwrapComponentExpression(file, last, seen);
+      if (inner?.jsx) return inner;
+    }
+    if (ts.isCallExpression(expression.expression)) {
+      return unwrapComponentExpression(file, expression.expression, seen);
+    }
+  }
+  return null;
+}
+
+function localAlias(file: FileInfo, name: string, seen: Set<string>): Fn | null {
+  for (const fn of file.functions) {
+    if (fn.name === name && fn.jsx) return fn;
+  }
+  let found: Fn | null = null;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      node.initializer
+    ) {
+      found = unwrapComponentExpression(file, node.initializer, seen);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file.source);
+  return found;
 }
 
 function collectFunctions(file: FileInfo): void {
@@ -354,6 +520,7 @@ function filePages(files: Map<string, FileInfo>): PageFact[] {
     const fn = defaultComponent(file) ?? exportedComponent(file);
     pages.push({
       route,
+      routes: [route],
       label: pageLabel(route, fn),
       fn,
       span: fn?.span ?? { file: file.path, startLine: 1, endLine: 1 },
@@ -370,6 +537,7 @@ function pageFromElement(
   fallback: Span,
 ): PageFact | null {
   const fn = componentFromExpression(file, files, element);
+  if (fn && isRouterShell(fn)) return null;
   if (fn && !fn.jsx && tagTextFromExpression(element) == null && !ts.isIdentifier(element)) return null;
   const named = expressionName(element);
   const label = fn && fn.name !== "Page" && fn.name !== "default"
@@ -377,11 +545,29 @@ function pageFromElement(
     : named
       ? humanize(named)
       : pageLabel(route, null);
-  return { route: normalizeRoute(route), label, fn, span: fn?.span ?? fallback };
+  const normalized = normalizeRoute(route);
+  return { route: normalized, routes: [normalized], label, fn, span: fn?.span ?? fallback };
+}
+
+function isRouterShell(fn: Fn): boolean {
+  if (!fn.body) return false;
+  let shell = false;
+  const visit = (node: ts.Node): void => {
+    if (shell) return;
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = tagText(node);
+      if (tag === "Route" || tag === "Routes" || tag === "Switch") shell = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(fn.body);
+  return shell;
 }
 
 function componentFromExpression(file: FileInfo, files: Map<string, FileInfo>, expression: ts.Expression): Fn | null {
-  if (ts.isIdentifier(expression)) return resolveFunction(file, files, expression.text);
+  if (ts.isIdentifier(expression)) {
+    return resolveFunction(file, files, expression.text) ?? unwrapComponentExpression(file, expression);
+  }
   if (ts.isJsxSelfClosingElement(expression) || ts.isJsxElement(expression) || ts.isJsxOpeningElement(expression)) {
     const opening = ts.isJsxElement(expression) ? expression.openingElement : expression;
     if (ts.isJsxOpeningElement(opening) || ts.isJsxSelfClosingElement(opening)) {
@@ -477,10 +663,11 @@ function interactionsOn(
         const event = attrExpression(opening, "onClick") ? "click" : attrExpression(opening, "onSubmit") ? "submit" : null;
         if (handlerExpr && event) {
           const tag = tagText(opening)?.toLowerCase() ?? "";
-          const label = interactionLabel(node, opening, handlerExpr) ;
           const handlers = handlerFunctions(file, files, handlerExpr);
           const inline = ts.isArrowFunction(handlerExpr) || ts.isFunctionExpression(handlerExpr) ? handlerExpr : null;
           const callsApi = reachableCalls(file, files, handlers, inline).length > 0;
+          const label = interactionLabel(node, opening, handlerExpr)
+            ?? (callsApi && host.component ? humanize(host.component.name) : null);
           const meaningful = (tag === "button" || tag === "form" || callsApi) && label != null;
           if (meaningful && label) {
             const key = `${host.page.route}:${label}:${spanOf(file.source, opening).startLine}`;
@@ -514,6 +701,10 @@ function handlerFunctions(file: FileInfo, files: Map<string, FileInfo>, expressi
     const fn = resolveMember(file, files, expression);
     return fn ? [fn] : [];
   }
+  if (ts.isCallExpression(expression) && ts.isPropertyAccessExpression(expression.expression)) {
+    const assigned = assignedHandler(file, expression.expression.name.text);
+    return assigned ? [assigned] : [];
+  }
   if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) {
     const nested: Fn[] = [];
     const visit = (node: ts.Node): void => {
@@ -527,6 +718,44 @@ function handlerFunctions(file: FileInfo, files: Map<string, FileInfo>, expressi
     return nested;
   }
   return [];
+}
+
+function assignedHandler(file: FileInfo, name: string): Fn | null {
+  let found: ts.Expression | null = null;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isPropertyAccessExpression(node.left) &&
+      node.left.expression.kind === ts.SyntaxKind.ThisKeyword &&
+      node.left.name.text === name
+    ) {
+      found = node.right;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file.source);
+  if (!found) return null;
+  let handler: ts.Expression = found;
+  if (
+    (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler)) &&
+    handler.body &&
+    (ts.isArrowFunction(handler.body) || ts.isFunctionExpression(handler.body))
+  ) {
+    handler = handler.body;
+  }
+  if (!ts.isArrowFunction(handler) && !ts.isFunctionExpression(handler)) return null;
+  return {
+    name,
+    qualified: name,
+    file: file.path,
+    node: handler,
+    body: handler.body,
+    span: spanOf(file.source, handler),
+    jsx: false,
+    isDefault: false,
+  };
 }
 
 function reachableCalls(file: FileInfo, files: Map<string, FileInfo>, handlers: Fn[], inline: ts.Node | null): ApiCall[] {
@@ -544,10 +773,12 @@ function reachableCalls(file: FileInfo, files: Map<string, FileInfo>, handlers: 
             calls.push(call);
           }
         }
-        const callee = resolveCallTarget(owner, files, child);
-        if (callee && depth < 3) {
-          const next = files.get(callee.file) ?? owner;
-          scanNode(next, callee.body, depth + 1);
+        const callees = resolveCallees(owner, files, child);
+        if (depth < 4) {
+          for (const callee of callees) {
+            const next = files.get(callee.file) ?? owner;
+            scanNode(next, callee.body, depth + 1);
+          }
         }
       }
       ts.forEachChild(child, visit);
@@ -590,8 +821,13 @@ function apiCallFrom(file: FileInfo, call: ts.CallExpression): ApiCall | null {
   return null;
 }
 
+interface RouterModel {
+  /** file:name → proven mount prefix. Missing key means the receiver is not a server. */
+  prefix: Map<string, string>;
+}
+
 function backendRoutes(files: Map<string, FileInfo>): RouteFact[] {
-  const prefixes = routerPrefixes(files);
+  const routers = routerModel(files);
   const routes: RouteFact[] = [];
   for (const file of files.values()) {
     const nextRoute = routeFromApiFilename(file.path);
@@ -609,17 +845,26 @@ function backendRoutes(files: Map<string, FileInfo>): RouteFact[] {
         const method = httpMethod(node.expression.name.text);
         const pathArg = node.arguments[0];
         const pathValue = pathArg ? staticPath(pathArg) : null;
-        if (method && pathValue && pathValue.startsWith("/")) {
-          const receiver = receiverName(node.expression.expression);
-          const prefix = receiver ? prefixes.get(`${file.path}:${receiver}`) ?? "" : "";
-          const full = joinRoutes(prefix, pathValue);
+        const receiver = receiverName(node.expression.expression);
+        const receiverKey = receiver ? `${file.path}:${receiver}` : null;
+        if (method && pathValue && pathValue.startsWith("/") && receiverKey && routers.prefix.has(receiverKey)) {
+          const full = joinRoutes(routers.prefix.get(receiverKey) ?? "", pathValue);
           const args = node.arguments.slice(1);
           const auth: Fn[] = [];
           let handler: Fn | null = null;
           for (const arg of args) {
-            const fn = expressionFunction(file, files, arg);
-            if (!fn) continue;
-            if (isAuthName(fn.name) || isAuthName(fn.qualified)) auth.push(fn);
+            const inline = inlineHandler(file, arg);
+            if (inline) {
+              inline.name = `${method} ${pathValue}`;
+              inline.qualified = `${method} ${full} handler`;
+            }
+            const fn = inline ?? expressionFunction(file, files, arg);
+            if (!fn) {
+              const authFn = authArgument(file, files, arg);
+              if (authFn) auth.push(authFn);
+              continue;
+            }
+            if (isAuthName(fn.name) || isAuthName(fn.qualified) || authArgument(file, files, arg)) auth.push(fn);
             else handler = fn;
           }
           routes.push({ method, path: full, span: spanOf(file.source, node), handler, auth });
@@ -632,41 +877,245 @@ function backendRoutes(files: Map<string, FileInfo>): RouteFact[] {
   return routes;
 }
 
-function routerPrefixes(files: Map<string, FileInfo>): Map<string, string> {
-  const routers = new Set<string>();
-  const prefixes = new Map<string, string>();
+function inlineHandler(file: FileInfo, expression: ts.Expression): Fn | null {
+  if (!ts.isArrowFunction(expression) && !ts.isFunctionExpression(expression)) return null;
+  return {
+    name: "handler",
+    qualified: "handler",
+    file: file.path,
+    node: expression,
+    body: expression.body,
+    span: spanOf(file.source, expression),
+    jsx: expression.body ? containsJsx(expression.body) : false,
+    isDefault: false,
+  };
+}
+
+function authArgument(file: FileInfo, files: Map<string, FileInfo>, expression: ts.Expression): Fn | null {
+  if (!ts.isPropertyAccessExpression(expression) || !ts.isIdentifier(expression.expression)) return null;
+  const owner = expression.expression.text;
+  const method = expression.name.text;
+  if (method !== "required" && method !== "optional" && !isAuthName(method)) return null;
+  const located = locateSymbol(file, files, owner);
+  const ownerFile = located?.file.path ?? "";
+  const ownerIsAuth = owner === "auth" || owner === "authenticate" || /\/auth(\.|\/|$)/i.test(ownerFile);
+  if (!ownerIsAuth && !isAuthName(method)) return null;
+  const span = spanOf(file.source, expression);
+  return {
+    name: method,
+    qualified: `${owner}.${method}`,
+    file: located?.file.path ?? file.path,
+    node: expression,
+    body: undefined,
+    span,
+    jsx: false,
+    isDefault: false,
+  };
+}
+
+function routerModel(files: Map<string, FileInfo>): RouterModel {
+  const kind = new Map<string, "app" | "router">();
+  const alias = new Map<string, string>();
+  const mounts: { parent: string; child: string; prefix: string }[] = [];
+
+  const resolveKey = (file: FileInfo, name: string): string | null => {
+    const local = `${file.path}:${name}`;
+    if (kind.has(local)) return local;
+    if (alias.has(local)) return alias.get(local) ?? null;
+    const binding = file.imports.get(name);
+    if (!binding?.resolved) return null;
+    const imported = binding.imported === "*" ? "default" : binding.imported;
+    const remote = `${binding.resolved}:${imported}`;
+    if (kind.has(remote)) return remote;
+    return alias.get(remote) ?? null;
+  };
+
   for (const file of files.values()) {
     const visit = (node: ts.Node): void => {
-      if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.initializer &&
-        ts.isCallExpression(node.initializer)
-      ) {
-        const callee = node.initializer.expression;
-        const called = ts.isPropertyAccessExpression(callee)
-          ? callee.name.text
-          : ts.isIdentifier(callee)
-            ? callee.text
-            : "";
-        if (called === "Router") routers.add(`${file.path}:${node.name.text}`);
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+        const key = `${file.path}:${node.name.text}`;
+        const created = walkRouterExpr(file, node.initializer, key, kind, mounts, resolveKey, files, alias);
+        if (created) kind.set(key, kind.get(created) ?? "router");
+      }
+      if (ts.isExportAssignment(node)) {
+        if (ts.isIdentifier(node.expression)) {
+          const target = `${file.path}:${node.expression.text}`;
+          if (kind.has(target)) alias.set(`${file.path}:default`, target);
+        } else {
+          const key = `${file.path}:default`;
+          const created = walkRouterExpr(file, node.expression, key, kind, mounts, resolveKey, files, alias);
+          if (created) kind.set(key, kind.get(created) ?? "router");
+        }
       }
       if (
-        ts.isCallExpression(node) &&
-        ts.isPropertyAccessExpression(node.expression) &&
-        node.expression.name.text === "use"
+        ts.isExpressionStatement(node) &&
+        ts.isBinaryExpression(node.expression) &&
+        node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isPropertyAccessExpression(node.expression.left) &&
+        node.expression.left.name.text === "exports" &&
+        ts.isIdentifier(node.expression.left.expression) &&
+        node.expression.left.expression.text === "module" &&
+        ts.isIdentifier(node.expression.right)
       ) {
-        const mount = node.arguments[0] ? staticPath(node.arguments[0]) : null;
-        const target = node.arguments[1];
-        if (mount && target && ts.isIdentifier(target) && routers.has(`${file.path}:${target.text}`)) {
-          prefixes.set(`${file.path}:${target.text}`, mount);
-        }
+        const target = `${file.path}:${node.expression.right.text}`;
+        if (kind.has(target)) alias.set(`${file.path}:default`, target);
       }
       ts.forEachChild(node, visit);
     };
     visit(file.source);
+
+    const visitUse = (node: ts.Node): void => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === "use" &&
+        ts.isIdentifier(node.expression.expression)
+      ) {
+        const parent = resolveKey(file, node.expression.expression.text);
+        if (parent) recordUse(file, parent, node.arguments, mounts, resolveKey, files, kind, alias);
+      }
+      ts.forEachChild(node, visitUse);
+    };
+    visitUse(file.source);
   }
-  return prefixes;
+
+  for (const file of files.values()) {
+    const visitUse = (node: ts.Node): void => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === "use" &&
+        ts.isIdentifier(node.expression.expression)
+      ) {
+        const parent = resolveKey(file, node.expression.expression.text);
+        if (parent) recordUse(file, parent, node.arguments, mounts, resolveKey, files, kind, alias);
+      }
+      ts.forEachChild(node, visitUse);
+    };
+    visitUse(file.source);
+    for (const statement of file.source.statements) {
+      if (ts.isVariableStatement(statement)) {
+        for (const decl of statement.declarationList.declarations) {
+          if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
+          const key = `${file.path}:${decl.name.text}`;
+          if (!kind.has(key)) continue;
+          walkRouterExpr(file, decl.initializer, key, kind, mounts, resolveKey, files, alias);
+        }
+      }
+      if (ts.isExportAssignment(statement) && !ts.isIdentifier(statement.expression)) {
+        const key = alias.get(`${file.path}:default`) ?? `${file.path}:default`;
+        if (kind.has(key) || kind.has(`${file.path}:default`)) {
+          walkRouterExpr(file, statement.expression, key, kind, mounts, resolveKey, files, alias);
+        }
+      }
+    }
+  }
+
+  const prefix = new Map<string, string>();
+  const inbound = new Set(mounts.map((mount) => mount.child));
+  for (const key of kind.keys()) {
+    if (!inbound.has(key)) prefix.set(key, "");
+  }
+  let progressed = true;
+  let guard = 0;
+  while (progressed && guard < kind.size + mounts.length + 2) {
+    guard += 1;
+    progressed = false;
+    for (const mount of mounts) {
+      if (!prefix.has(mount.parent) || prefix.has(mount.child)) continue;
+      const next = mount.prefix ? joinRoutes(prefix.get(mount.parent) ?? "", mount.prefix) : (prefix.get(mount.parent) ?? "");
+      prefix.set(mount.child, next === "/" ? "" : next);
+      progressed = true;
+    }
+  }
+  for (const key of kind.keys()) {
+    if (!prefix.has(key)) prefix.set(key, "");
+  }
+  for (const [from, to] of alias) {
+    const target = prefix.get(to);
+    if (target !== undefined) prefix.set(from, target);
+  }
+  return { prefix };
+}
+
+function walkRouterExpr(
+  file: FileInfo,
+  expression: ts.Expression,
+  keyIfRoot: string,
+  kind: Map<string, "app" | "router">,
+  mounts: { parent: string; child: string; prefix: string }[],
+  resolveKey: (file: FileInfo, name: string) => string | null,
+  files: Map<string, FileInfo>,
+  alias: Map<string, string>,
+): string | null {
+  if (ts.isIdentifier(expression)) return resolveKey(file, expression.text);
+  if (!ts.isCallExpression(expression)) return null;
+  const created = factoryKind(expression);
+  if (created) {
+    kind.set(keyIfRoot, created);
+    return keyIfRoot;
+  }
+  if (ts.isPropertyAccessExpression(expression.expression) && expression.expression.name.text === "use") {
+    const parent = walkRouterExpr(file, expression.expression.expression, keyIfRoot, kind, mounts, resolveKey, files, alias);
+    if (!parent) return null;
+    if (!kind.has(parent)) kind.set(parent, "router");
+    recordUse(file, parent, expression.arguments, mounts, resolveKey, files, kind, alias);
+    return parent;
+  }
+  return null;
+}
+
+function recordUse(
+  file: FileInfo,
+  parent: string,
+  args: readonly ts.Expression[],
+  mounts: { parent: string; child: string; prefix: string }[],
+  resolveKey: (file: FileInfo, name: string) => string | null,
+  files: Map<string, FileInfo>,
+  kind: Map<string, "app" | "router">,
+  alias: Map<string, string>,
+): void {
+  const first = args[0];
+  if (!first) return;
+  const explicit = staticPath(first);
+  const mounted = explicit ? args[1] : first;
+  const prefix = explicit ?? "";
+  if (!mounted) return;
+  const child = routerExprKey(file, mounted, resolveKey, files, kind, alias);
+  if (!child || child === parent) return;
+  if (mounts.some((mount) => mount.parent === parent && mount.child === child && mount.prefix === prefix)) return;
+  mounts.push({ parent, child, prefix });
+}
+
+function routerExprKey(
+  file: FileInfo,
+  expression: ts.Expression,
+  resolveKey: (file: FileInfo, name: string) => string | null,
+  files: Map<string, FileInfo>,
+  kind: Map<string, "app" | "router">,
+  alias: Map<string, string>,
+): string | null {
+  if (ts.isIdentifier(expression)) return resolveKey(file, expression.text);
+  if (ts.isCallExpression(expression) && ts.isIdentifier(expression.expression) && expression.expression.text === "require") {
+    const spec = expression.arguments[0];
+    if (!spec || !ts.isStringLiteral(spec)) return null;
+    const resolved = resolveSpecifier(file.path, spec.text, files);
+    if (!resolved) return null;
+    const remote = `${resolved}:default`;
+    if (kind.has(remote)) return remote;
+    return alias.get(remote) ?? null;
+  }
+  return null;
+}
+
+function factoryKind(expression: ts.CallExpression): "app" | "router" | null {
+  const callee = expression.expression;
+  if (ts.isIdentifier(callee)) {
+    if (callee.text === "express" || callee.text === "fastify") return "app";
+    if (callee.text === "Router") return "router";
+  }
+  if (ts.isPropertyAccessExpression(callee) && callee.name.text === "Router") return "router";
+  return null;
 }
 
 interface AssembleInput {
@@ -692,18 +1141,21 @@ function assemble(input: AssembleInput): ApplicationGraph {
   const pageNodes = new Map<string, GraphNode>();
   for (const page of input.pages) {
     const metadata: NodeMetadata = { route: page.route };
+    const extraRoutes = page.routes.filter((route) => route !== page.route);
     const node = builder.node({
       type: "page",
       label: page.label,
       summary: page.route,
       detail: page.fn
-        ? `${page.label} is served at ${page.route}.`
+        ? extraRoutes.length > 0
+          ? `${page.label} is served at ${page.route}. Also registered at ${extraRoutes.join(", ")}.`
+          : `${page.label} is served at ${page.route}.`
         : `Route ${page.route}.`,
       source: page.span,
       metadata,
     });
-    builder.edge(app, node, "contains", "contains");
-    pageNodes.set(page.route, node);
+    builder.edge(app, node, "contains", "contains", page.span);
+    for (const route of page.routes) pageNodes.set(route, node);
   }
 
   const componentNodes = new Map<string, GraphNode>();
@@ -718,7 +1170,7 @@ function assemble(input: AssembleInput): ApplicationGraph {
       detail: `${humanize(component.fn.name)} is rendered by ${page.label}.`,
       source: component.fn.span,
     });
-    builder.contain(page, node);
+    builder.contain(page, node, component.fn.span);
     componentNodes.set(key, node);
   }
 
@@ -728,6 +1180,56 @@ function assemble(input: AssembleInput): ApplicationGraph {
   const auths = new Map<string, GraphNode>();
   const files = new Map<string, GraphNode>();
   const flows: Flow[] = [];
+  const apis = new Map<string, GraphNode>();
+  const apiAttached = new Set<string>();
+  const interactionApis = new Set<string>();
+
+  const ensureApi = (method: HttpMethod, rawPath: string, evidence: Span): {
+    api: GraphNode;
+    nodes: GraphNode[];
+    edges: GraphEdge[];
+  } | null => {
+    const pathValue = normalizeRoute(rawPath);
+    const key = `${method} ${pathValue}`;
+    const existing = apis.get(key);
+    if (existing) return { api: existing, nodes: [], edges: [] };
+    if (apis.size >= LIMITS.maxApis) return null;
+    const route = matchRoute(input.routes, method, rawPath);
+    const metadata: NodeMetadata = { method, path: pathValue };
+    if (route && route.auth.length > 0) metadata.authRequired = true;
+    const api = builder.node({
+      type: "api",
+      label: key,
+      summary: route ? route.span.file : evidence.file,
+      detail: route
+        ? `${key} is handled in ${route.span.file}.`
+        : `${key} is called from ${evidence.file}. No matching backend route was found.`,
+      source: route?.span ?? evidence,
+      metadata,
+    });
+    apis.set(key, api);
+    const extraNodes: GraphNode[] = [];
+    const extraEdges: GraphEdge[] = [];
+    if (route && !apiAttached.has(api.id)) {
+      apiAttached.add(api.id);
+      for (const authFn of route.auth) {
+        const auth = authNode(builder, auths, authFn);
+        const edge = builder.edge(api, auth, "authenticates", "authentication required", authFn.span);
+        extraNodes.push(auth);
+        extraEdges.push(edge);
+      }
+      if (route.handler) {
+        const handler = functionNode(builder, route.handler);
+        const edge = builder.edge(api, handler, "handles", "handles", route.span);
+        extraNodes.push(handler);
+        extraEdges.push(edge);
+        const followed = followImplementation(builder, input.files, route.handler, databases, tables, externals);
+        extraNodes.push(...followed.nodes);
+        extraEdges.push(...followed.edges);
+      }
+    }
+    return { api, nodes: extraNodes, edges: extraEdges };
+  };
 
   for (const interaction of input.interactions) {
     const page = pageNodes.get(interaction.pageRoute);
@@ -745,64 +1247,30 @@ function assemble(input: AssembleInput): ApplicationGraph {
         : `${interaction.label} is a user action on ${page.label}.`,
       source: interaction.span,
     });
-    builder.contain(page, node);
+    builder.contain(page, node, interaction.span);
     const componentKey = interaction.component
       ? `${interaction.pageRoute}:${interaction.component.qualified}:${interaction.component.span.startLine}`
       : null;
     const componentNode = componentKey ? componentNodes.get(componentKey) : undefined;
-    if (componentNode) builder.edge(componentNode, node, "calls", "triggers");
+    if (componentNode) builder.edge(componentNode, node, "calls", "triggers", interaction.span);
 
     const fileNode = fileNodeFor(builder, files, interaction.span.file);
-    builder.edge(node, fileNode, "defined_in", "defined in", false);
+    builder.edge(node, fileNode, "defined_in", "defined in", interaction.span, { expand: false });
 
     const flowNodes = [app, page, node];
     const flowEdges: GraphEdge[] = [];
     for (const call of calls.slice(0, 3)) {
-      const route = matchRoute(input.routes, call.method, call.path);
-      const metadata: NodeMetadata = {
-        method: call.method,
-        path: normalizeRoute(call.path),
-      };
-      if (route && route.auth.length > 0) metadata.authRequired = true;
-      const api = builder.node({
-        type: "api",
-        label: `${call.method} ${normalizeRoute(call.path)}`,
-        summary: route ? route.span.file : call.span.file,
-        detail: route
-          ? `${call.method} ${normalizeRoute(call.path)} is handled in ${route.span.file}.`
-          : `${call.method} ${normalizeRoute(call.path)} is called from ${call.span.file}. No matching backend route was found.`,
-        source: route?.span ?? call.span,
-        metadata,
-      });
-      const callEdge = builder.edge(node, api, "calls", "calls");
-      flowNodes.push(api);
-      flowEdges.push(callEdge);
-
-      if (route) {
-        for (const authFn of route.auth) {
-          const auth = authNode(builder, auths, authFn);
-          const edge = builder.edge(api, auth, "authenticates", "authentication required");
-          flowNodes.push(auth);
-          flowEdges.push(edge);
-        }
-        if (route.handler) {
-          const handler = functionNode(builder, route.handler);
-          const edge = builder.edge(api, handler, "handles", "handles");
-          flowNodes.push(handler);
-          flowEdges.push(edge);
-          const followed = followImplementation(builder, input.files, route.handler, databases, tables, externals);
-          flowNodes.push(...followed.nodes);
-          flowEdges.push(...followed.edges);
-          if (followed.serviceEdge && followed.service) {
-            // already included
-          }
-        }
-      }
+      interactionApis.add(`${interaction.pageRoute}:${call.method} ${normalizeRoute(call.path)}`);
+      const ensured = ensureApi(call.method, call.path, call.span);
+      if (!ensured) continue;
+      const callEdge = builder.edge(node, ensured.api, "calls", "calls", call.span);
+      flowNodes.push(ensured.api, ...ensured.nodes);
+      flowEdges.push(callEdge, ...ensured.edges);
     }
 
     if (flowNodes.length >= 2) {
       flows.push({
-        id: builder.id(`flow-${slug(interaction.label)}`),
+        id: builder.flowId(`flow-${interaction.pageRoute}-${slug(interaction.label)}`),
         label: interaction.label,
         description: `${interaction.label} on ${page.label}.`,
         nodeIds: uniqueIds(flowNodes),
@@ -811,28 +1279,22 @@ function assemble(input: AssembleInput): ApplicationGraph {
     }
   }
 
+  for (const page of input.pages) {
+    const pageNode = pageNodes.get(page.route);
+    const file = page.fn ? input.files.get(page.fn.file) : undefined;
+    if (!pageNode || !page.fn || !file) continue;
+    const calls = reachableCalls(file, input.files, [page.fn], null);
+    for (const call of calls.slice(0, 8)) {
+      const key = `${call.method} ${normalizeRoute(call.path)}`;
+      if (interactionApis.has(`${page.route}:${key}`)) continue;
+      const ensured = ensureApi(call.method, call.path, call.span);
+      if (!ensured) continue;
+      builder.edge(pageNode, ensured.api, "calls", "calls", call.span);
+    }
+  }
+
   for (const route of input.routes) {
-    const key = `${route.method} ${normalizeRoute(route.path)}`;
-    if (builder.nodes.some((node) => node.type === "api" && node.label === key)) continue;
-    if (builder.nodes.filter((node) => node.type === "api").length >= LIMITS.maxApis) break;
-    const metadata: NodeMetadata = { method: route.method, path: normalizeRoute(route.path) };
-    if (route.auth.length > 0) metadata.authRequired = true;
-    const api = builder.node({
-      type: "api",
-      label: key,
-      summary: route.span.file,
-      detail: `Backend route ${key}.`,
-      source: route.span,
-      metadata,
-    });
-    for (const authFn of route.auth) {
-      builder.edge(api, authNode(builder, auths, authFn), "authenticates", "authentication required");
-    }
-    if (route.handler) {
-      const handler = functionNode(builder, route.handler);
-      builder.edge(api, handler, "handles", "handles");
-      followImplementation(builder, input.files, route.handler, databases, tables, externals);
-    }
+    ensureApi(route.method, route.path, route.span);
   }
 
   const id = slug(appLabel) || "repository";
@@ -872,11 +1334,12 @@ function followImplementation(
     const visit = (node: ts.Node): void => {
       if (ts.isCallExpression(node)) {
         const serviceCall = serviceCallFrom(file, files, node);
+        const evidence = spanOf(file.source, node);
         if (serviceCall) {
           const serviceNode = serviceNodeFor(builder, serviceCall.owner, serviceCall.method);
           const methodNode = functionNode(builder, serviceCall.method, `${serviceCall.owner}.${serviceCall.method.name}()`);
-          const toService = builder.edge(via, serviceNode, "calls", "calls");
-          const toMethod = builder.edge(serviceNode, methodNode, "calls", "calls");
+          const toService = builder.edge(via, serviceNode, "calls", "calls", evidence);
+          const toMethod = builder.edge(serviceNode, methodNode, "calls", "calls", serviceCall.method.span);
           if (!service) {
             service = serviceNode;
             serviceEdge = toService;
@@ -884,13 +1347,23 @@ function followImplementation(
             edges.push(toService, toMethod);
           }
           visitFn(serviceCall.method, methodNode, depth + 1);
+        } else {
+          const callee = resolveCallTarget(file, files, node);
+          const calleeFile = callee ? files.get(callee.file) : undefined;
+          if (callee && calleeFile && persistsWithin(calleeFile, files, callee, 0, new Set())) {
+            const fnNode = functionNode(builder, callee);
+            const edge = builder.edge(via, fnNode, "calls", "calls", evidence);
+            nodes.push(fnNode);
+            edges.push(edge);
+            visitFn(callee, fnNode, depth + 1);
+          }
         }
         const sql = sqlCall(file, node);
         if (sql) {
           const engine = file.database ?? "Database";
           const database = databaseNode(builder, databases, engine, file.path);
-          const table = tableNode(builder, tables, database, sql.table, file.path);
-          const edge = builder.edge(via, table, sql.op, sql.op);
+          const table = tableNode(builder, tables, database, sql.table, file.path, evidence);
+          const edge = builder.edge(via, table, sql.op, sql.op, evidence);
           nodes.push(database, table);
           edges.push(edge);
         }
@@ -899,7 +1372,7 @@ function followImplementation(
           const external = externalNode(builder, externals, externalName, file.path);
           const kind: EdgeKind = externalName === "Stripe" ? "sends_payment_to" : "depends_on";
           const label = externalName === "Stripe" ? "sends payment to" : "integrates with";
-          const edge = builder.edge(via, external, kind, label);
+          const edge = builder.edge(via, external, kind, label, evidence);
           nodes.push(external);
           edges.push(edge);
         }
@@ -909,7 +1382,7 @@ function followImplementation(
         if (envName && !(ts.isCallExpression(node.parent) && externalCall(file, node.parent))) {
           const external = externalNode(builder, externals, envName, `${envName} env`);
           if (!builder.edges.some((edge) => edge.source === via.id && edge.target === external.id)) {
-            const edge = builder.edge(via, external, "depends_on", "integrates with");
+            const edge = builder.edge(via, external, "depends_on", "integrates with", spanOf(file.source, node));
             nodes.push(external);
             edges.push(edge);
           }
@@ -932,11 +1405,54 @@ function serviceCallFrom(
   if (!ts.isPropertyAccessExpression(call.expression) || !ts.isIdentifier(call.expression.expression)) return null;
   const ownerName = call.expression.expression.text;
   const methodName = call.expression.name.text;
-  if (!/Service$|Repository$|Store$/.test(ownerName)) return null;
+  if (/^(console|Math|JSON|Promise|Object|Array|window|document|localStorage|sessionStorage|process)$/.test(ownerName)) {
+    return null;
+  }
   const symbol = lookup(file, files, ownerName);
   const method = symbol?.methods.get(methodName);
   if (!method) return null;
-  return { owner: ownerName, method };
+  if (/(Service|Repository|Repo|Dao)$/.test(ownerName)) return { owner: ownerName, method };
+  const ownerFile = files.get(method.file);
+  if (ownerFile && containsPersistence(ownerFile, method)) return { owner: ownerName, method };
+  return null;
+}
+
+function containsPersistence(file: FileInfo, fn: Fn): boolean {
+  if (!fn.body) return false;
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(node) && sqlCall(file, node)) found = true;
+    ts.forEachChild(node, visit);
+  };
+  visit(fn.body);
+  return found;
+}
+
+function persistsWithin(
+  file: FileInfo,
+  files: Map<string, FileInfo>,
+  fn: Fn,
+  depth: number,
+  seen: Set<string>,
+): boolean {
+  if (!fn.body || depth > 3) return false;
+  const key = `${fn.file}:${fn.span.startLine}:${fn.name}`;
+  if (seen.has(key)) return false;
+  seen.add(key);
+  if (containsPersistence(file, fn)) return true;
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(node)) {
+      const callee = resolveCallTarget(file, files, node);
+      const next = callee ? files.get(callee.file) : undefined;
+      if (callee && next && persistsWithin(next, files, callee, depth + 1, seen)) found = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(fn.body);
+  return found;
 }
 
 function sqlCall(file: FileInfo, call: ts.CallExpression): { op: "writes" | "queries"; table: string } | null {
@@ -1026,7 +1542,13 @@ function authNode(builder: Builder, auths: Map<string, GraphNode>, fn: Fn): Grap
   const key = `${fn.file}:${fn.name}`;
   const existing = auths.get(key);
   if (existing) return existing;
-  const label = fn.name === "requireAuth" ? "Require auth" : humanize(fn.name);
+  const label = fn.name === "requireAuth"
+    ? "Require auth"
+    : fn.qualified.startsWith("auth.") && fn.name === "required"
+      ? "Auth required"
+      : fn.qualified.startsWith("auth.") && fn.name === "optional"
+        ? "Auth optional"
+        : humanize(fn.name);
   const node = builder.node({
     type: "auth",
     label,
@@ -1084,6 +1606,7 @@ function tableNode(
   database: GraphNode,
   name: string,
   file: string,
+  evidence: Span,
 ): GraphNode {
   const key = `${database.id}:${name}`;
   const existing = tables.get(key);
@@ -1095,7 +1618,7 @@ function tableNode(
     detail: `${name} is accessed in ${file}.`,
   });
   tables.set(key, node);
-  builder.contain(database, node);
+  builder.contain(database, node, evidence);
   return node;
 }
 
@@ -1129,14 +1652,11 @@ function fileNodeFor(builder: Builder, files: Map<string, GraphNode>, file: stri
 class Builder {
   readonly nodes: GraphNode[] = [];
   readonly edges: GraphEdge[] = [];
-  private seq = 0;
-  private ids = new Map<string, number>();
+  private nodeIds = new Set<string>();
+  private edgeById = new Map<string, GraphEdge>();
 
-  id(base: string): string {
-    const clean = slug(base) || "n";
-    const count = (this.ids.get(clean) ?? 0) + 1;
-    this.ids.set(clean, count);
-    return count === 1 ? clean : `${clean}-${count}`;
+  flowId(base: string): string {
+    return `${slug(base).slice(0, 32) || "flow"}-${digest(["flow", base])}`;
   }
 
   node(draft: {
@@ -1148,7 +1668,7 @@ class Builder {
     metadata?: NodeMetadata;
   }): GraphNode {
     const node: GraphNode = {
-      id: this.id(draft.label),
+      id: this.nodeId(draft.type, draft.label, draft.source),
       type: draft.type,
       layer: LAYER_FOR_TYPE[draft.type],
       parentId: null,
@@ -1162,23 +1682,66 @@ class Builder {
     return node;
   }
 
-  contain(parent: GraphNode, child: GraphNode): GraphEdge {
+  contain(parent: GraphNode, child: GraphNode, evidence: Span): GraphEdge {
     child.parentId = parent.id;
-    return this.edge(parent, child, "contains", "contains");
+    return this.edge(parent, child, "contains", "contains", evidence);
   }
 
-  edge(source: GraphNode, target: GraphNode, kind: EdgeKind, label: string, expand?: false): GraphEdge {
+  edge(
+    source: GraphNode,
+    target: GraphNode,
+    kind: EdgeKind,
+    label: string,
+    evidence: Span,
+    options?: { expand?: false },
+  ): GraphEdge {
+    const id = `e-${digest([
+      source.id,
+      target.id,
+      kind,
+      label,
+      evidence.file,
+      String(evidence.startLine),
+      String(evidence.endLine),
+    ])}`;
+    const existing = this.edgeById.get(id);
+    if (existing) return existing;
     const edge: GraphEdge = {
-      id: `e${++this.seq}`,
+      id,
       source: source.id,
       target: target.id,
       kind,
       label,
+      metadata: { evidence: { file: evidence.file, startLine: evidence.startLine, endLine: evidence.endLine } },
     };
-    if (expand === false) edge.expand = false;
+    if (options?.expand === false) edge.expand = false;
     this.edges.push(edge);
+    this.edgeById.set(id, edge);
     return edge;
   }
+
+  private nodeId(type: string, label: string, source: SourceRef | undefined): string {
+    const base = `${(slug(label) || type).slice(0, 28)}-${digest([
+      type,
+      label,
+      source?.file ?? "",
+      String(source?.startLine ?? 0),
+      String(source?.endLine ?? 0),
+    ])}`;
+    if (!this.nodeIds.has(base)) {
+      this.nodeIds.add(base);
+      return base;
+    }
+    let n = 2;
+    while (this.nodeIds.has(`${base}-${n}`)) n += 1;
+    const id = `${base}-${n}`;
+    this.nodeIds.add(id);
+    return id;
+  }
+}
+
+function digest(parts: readonly string[]): string {
+  return createHash("sha1").update(parts.join("\0")).digest("hex").slice(0, 10);
 }
 
 function lookup(file: FileInfo, files: Map<string, FileInfo>, name: string): SymbolRec | null {
@@ -1203,8 +1766,216 @@ function resolveMember(file: FileInfo, files: Map<string, FileInfo>, expression:
 
 function resolveCallTarget(file: FileInfo, files: Map<string, FileInfo>, call: ts.CallExpression): Fn | null {
   if (ts.isIdentifier(call.expression)) return resolveFunction(file, files, call.expression.text);
-  if (ts.isPropertyAccessExpression(call.expression)) return resolveMember(file, files, call.expression);
+  if (ts.isPropertyAccessExpression(call.expression)) return resolvePropertyChain(file, files, call.expression);
   return null;
+}
+
+function resolveCallees(file: FileInfo, files: Map<string, FileInfo>, call: ts.CallExpression): Fn[] {
+  const direct = resolveCallTarget(file, files, call);
+  if (direct) return [direct];
+  const locals = localFunctionRefs(file, files, call);
+  if (locals.length > 0) return locals;
+  const dispatched = propsDispatchFn(file, call);
+  return dispatched ? [dispatched] : [];
+}
+
+function localFunctionRefs(file: FileInfo, files: Map<string, FileInfo>, call: ts.CallExpression): Fn[] {
+  if (!ts.isIdentifier(call.expression)) return [];
+  const initializer = bindingInitializer(call, call.expression.text);
+  if (!initializer) return [];
+  return referencedFunctions(file, files, initializer);
+}
+
+function bindingInitializer(from: ts.Node, name: string): ts.Expression | null {
+  let scope: ts.Node | undefined = from.parent;
+  while (scope && !ts.isFunctionLike(scope) && !ts.isSourceFile(scope) && !ts.isClassDeclaration(scope)) {
+    scope = scope.parent;
+  }
+  if (!scope) return null;
+  let found: ts.Expression | null = null;
+  const visit = (node: ts.Node): void => {
+    if (node !== scope && (ts.isFunctionLike(node) || ts.isClassDeclaration(node))) return;
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      node.initializer &&
+      node.end <= from.getStart()
+    ) {
+      found = node.initializer;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(scope);
+  return found;
+}
+
+function referencedFunctions(file: FileInfo, files: Map<string, FileInfo>, expression: ts.Expression): Fn[] {
+  if (ts.isParenthesizedExpression(expression)) return referencedFunctions(file, files, expression.expression);
+  if (ts.isPropertyAccessExpression(expression)) {
+    const fn = resolvePropertyChain(file, files, expression);
+    return fn ? [fn] : [];
+  }
+  if (ts.isIdentifier(expression)) {
+    const fn = resolveFunction(file, files, expression.text);
+    return fn ? [fn] : [];
+  }
+  if (ts.isConditionalExpression(expression)) {
+    return [
+      ...referencedFunctions(file, files, expression.whenTrue),
+      ...referencedFunctions(file, files, expression.whenFalse),
+    ];
+  }
+  return [];
+}
+
+function propsDispatchFn(file: FileInfo, call: ts.CallExpression): Fn | null {
+  const expression = call.expression;
+  if (!ts.isPropertyAccessExpression(expression) || !ts.isPropertyAccessExpression(expression.expression)) return null;
+  const props = expression.expression;
+  if (props.name.text !== "props" || props.expression.kind !== ts.SyntaxKind.ThisKeyword) return null;
+  const component = enclosingComponentName(call);
+  if (!component) return null;
+  const body = dispatchMethodBody(file, component, expression.name.text);
+  if (!body) return null;
+  return {
+    name: expression.name.text,
+    qualified: `${component}.${expression.name.text}`,
+    file: file.path,
+    node: body,
+    body,
+    span: spanOf(file.source, body),
+    jsx: false,
+    isDefault: false,
+  };
+}
+
+function enclosingComponentName(node: ts.Node): string | null {
+  let current: ts.Node | undefined = node;
+  while (current) {
+    if (ts.isClassDeclaration(current) && current.name) return current.name.text;
+    if (ts.isFunctionDeclaration(current) && current.name) return current.name.text;
+    current = current.parent;
+  }
+  return null;
+}
+
+function dispatchMethodBody(file: FileInfo, component: string, method: string): ts.Node | undefined {
+  let found: ts.Node | undefined;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(node) && ts.isCallExpression(node.expression)) {
+      const wrapped = node.arguments[node.arguments.length - 1];
+      const inner = node.expression;
+      const callee = inner.expression;
+      const called = ts.isIdentifier(callee) ? callee.text : ts.isPropertyAccessExpression(callee) ? callee.name.text : "";
+      const wraps = wrapped != null && ts.isIdentifier(wrapped) && wrapped.text === component;
+      if (called === "connect" && wraps) {
+        const dispatchArg = inner.arguments[1];
+        const fn = dispatchArg ? unwrapToFunction(file, dispatchArg) : null;
+        const returned = fn ? returnedObject(fn.body) : null;
+        const methodBody = returned ? objectMethodBody(returned, method) : null;
+        if (methodBody) found = methodBody;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file.source);
+  return found;
+}
+
+function unwrapToFunction(file: FileInfo, expression: ts.Expression): ts.ArrowFunction | ts.FunctionExpression | null {
+  if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) return expression;
+  if (!ts.isIdentifier(expression)) return null;
+  let found: ts.ArrowFunction | ts.FunctionExpression | null = null;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === expression.text &&
+      node.initializer &&
+      (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))
+    ) {
+      found = node.initializer;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file.source);
+  return found;
+}
+
+function returnedObject(body: ts.ConciseBody | undefined): ts.ObjectLiteralExpression | null {
+  if (!body) return null;
+  if (ts.isParenthesizedExpression(body)) return returnedObject(body.expression);
+  if (ts.isObjectLiteralExpression(body)) return body;
+  if (ts.isBlock(body)) {
+    for (const statement of body.statements) {
+      if (ts.isReturnStatement(statement) && statement.expression && ts.isObjectLiteralExpression(statement.expression)) {
+        return statement.expression;
+      }
+    }
+  }
+  return null;
+}
+
+function objectMethodBody(object: ts.ObjectLiteralExpression, method: string): ts.Node | null {
+  for (const prop of object.properties) {
+    const name = ts.isPropertyAssignment(prop) || ts.isMethodDeclaration(prop) ? propertyNameText(prop.name) : null;
+    if (name !== method) continue;
+    if (ts.isMethodDeclaration(prop)) return prop.body ?? null;
+    if (ts.isPropertyAssignment(prop)) {
+      const init = prop.initializer;
+      if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) return init.body ?? null;
+    }
+  }
+  return null;
+}
+
+function resolvePropertyChain(
+  file: FileInfo,
+  files: Map<string, FileInfo>,
+  expression: ts.PropertyAccessExpression,
+): Fn | null {
+  const parts: string[] = [];
+  let cursor: ts.Expression = expression;
+  while (ts.isPropertyAccessExpression(cursor)) {
+    parts.unshift(cursor.name.text);
+    cursor = cursor.expression;
+  }
+  if (!ts.isIdentifier(cursor)) return null;
+  const root = locateSymbol(file, files, cursor.text);
+  if (!root) return null;
+  let current = root;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const prop = parts[index];
+    if (!prop) return null;
+    const alias = current.file.namespaces.get(current.name)?.get(prop);
+    if (!alias) return null;
+    const next = locateSymbol(current.file, files, alias);
+    if (!next) return null;
+    current = next;
+  }
+  const method = parts[parts.length - 1];
+  if (!method) return null;
+  return current.file.symbols.get(current.name)?.methods.get(method) ?? null;
+}
+
+function locateSymbol(
+  file: FileInfo,
+  files: Map<string, FileInfo>,
+  name: string,
+): { file: FileInfo; name: string } | null {
+  if (file.symbols.has(name) || file.namespaces.has(name)) return { file, name };
+  const binding = file.imports.get(name);
+  if (!binding?.resolved) return null;
+  const other = files.get(binding.resolved);
+  if (!other) return null;
+  const imported = binding.imported === "*" ? "default" : binding.imported;
+  if (imported === "default" && !other.symbols.has("default") && !other.namespaces.has("default")) {
+    return null;
+  }
+  return { file: other, name: imported };
 }
 
 function expressionFunction(file: FileInfo, files: Map<string, FileInfo>, expression: ts.Expression): Fn | null {
@@ -1214,18 +1985,29 @@ function expressionFunction(file: FileInfo, files: Map<string, FileInfo>, expres
 }
 
 function dedupePages(pages: PageFact[]): PageFact[] {
-  const byRoute = new Map<string, PageFact>();
+  const byComponent = new Map<string, PageFact>();
+  const unresolved = new Map<string, PageFact>();
   for (const page of pages) {
     const route = normalizeRoute(page.route);
-    const key = `${route.toLowerCase()}:${page.fn?.qualified ?? page.label}`;
-    const existing = byRoute.get(key);
-    if (!existing) {
-      byRoute.set(key, { ...page, route });
+    if (page.fn) {
+      const key = `${page.fn.file}:${page.fn.span.startLine}:${page.fn.name}`;
+      const existing = byComponent.get(key);
+      if (!existing) {
+        byComponent.set(key, { ...page, route, routes: [route] });
+        continue;
+      }
+      if (!existing.routes.includes(route)) existing.routes.push(route);
+      if (existing.fn && !existing.fn.jsx && page.fn.jsx) {
+        existing.fn = page.fn;
+        existing.span = page.span;
+        existing.label = page.label;
+      }
       continue;
     }
-    if (!existing.fn && page.fn) byRoute.set(key, { ...page, route: existing.route });
+    const key = `${route.toLowerCase()}:${page.label}`;
+    if (!unresolved.has(key)) unresolved.set(key, { ...page, route, routes: [route] });
   }
-  return [...byRoute.values()];
+  return [...byComponent.values(), ...unresolved.values()];
 }
 
 function routeFromFilename(file: string): string | null {
@@ -1275,18 +2057,52 @@ function pageLabel(route: string, fn: Fn | null): string {
 }
 
 function interactionLabel(element: ts.Node, opening: ts.JsxOpeningLikeElement, handler: ts.Expression): string | null {
-  const aria = attrString(opening, "aria-label");
-  if (aria && aria.length <= 48) return aria.trim();
+  const aria = readableLabel(attrString(opening, "aria-label"));
+  if (aria) return aria;
   if (ts.isJsxElement(element)) {
-    const text = element.children
-      .map((child) => (ts.isJsxText(child) ? child.text : ""))
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (text && text.length <= 48) return text;
+    const text = readableLabel(
+      element.children
+        .map((child) => (ts.isJsxText(child) ? child.text : ""))
+        .join(" "),
+    );
+    if (text) return text;
+    if (tagText(opening)?.toLowerCase() === "form") {
+      const button = submitButtonLabel(element);
+      if (button) return button;
+    }
   }
-  if (ts.isIdentifier(handler) && !/^on[A-Z]/.test(handler.text)) return humanize(handler.text);
+  if (ts.isIdentifier(handler) && !/^on[A-Z]/.test(handler.text) && !/^handle[A-Z]/.test(handler.text)) {
+    return readableLabel(humanize(handler.text));
+  }
   return null;
+}
+
+function submitButtonLabel(form: ts.JsxElement): string | null {
+  let found: string | null = null;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    const opening = ts.isJsxElement(node) ? node.openingElement : ts.isJsxSelfClosingElement(node) ? node : null;
+    if (opening && tagText(opening)?.toLowerCase() === "button" && ts.isJsxElement(node)) {
+      found = readableLabel(node.children.map((child) => (ts.isJsxText(child) ? child.text : "")).join(" "));
+      if (found) return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(form);
+  return found;
+}
+
+function readableLabel(value: string | null): string | null {
+  if (!value) return null;
+  const cleaned = value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#\d+;/g, " ")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned || cleaned.length > 48) return null;
+  if (/^(click|submit|handle click|on click|on submit)$/i.test(cleaned)) return null;
+  return cleaned;
 }
 
 function normalizeRoute(route: string): string {

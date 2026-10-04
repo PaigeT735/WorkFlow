@@ -188,6 +188,17 @@ export interface GraphEdge {
    * same nodes is visible. Omitted means false.
    */
   skeleton?: boolean;
+  /**
+   * File and line that justify the edge. Analyzer graphs always include this.
+   * Hand-written samples may omit it.
+   */
+  metadata?: {
+    evidence: {
+      file: string;
+      startLine: number;
+      endLine: number;
+    };
+  };
 }
 
 export interface Flow {

@@ -73,6 +73,10 @@ export async function analyzeTarget(repository: string): Promise<StoredProject> 
 
   try {
     const report = await inspectRepository(root);
+    if (report.filesAnalyzed === 0) {
+      if (owned) await removeClone(path.join(projectRootDir(), id));
+      throw new RepositoryError(422, "The repository has no supported source files to analyze.");
+    }
     const project: StoredProject = {
       id,
       name: report.graph.name || label,
@@ -103,6 +107,11 @@ export async function sweepExpired(): Promise<void> {
     const info = await stat(abs).catch(() => null);
     if (info && now - info.mtimeMs > TTL_MS) await rm(abs, { recursive: true, force: true });
   }
+}
+
+export async function discardProject(id: string): Promise<void> {
+  const project = projects.get(id);
+  if (project) await forget(project);
 }
 
 async function forget(project: StoredProject): Promise<void> {

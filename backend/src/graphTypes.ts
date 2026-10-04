@@ -89,6 +89,13 @@ export interface GraphNode {
   metadata?: NodeMetadata;
 }
 
+/** Where the analyzer saw the relationship. Omitted only on hand-written samples. */
+export interface EdgeEvidence {
+  file: string;
+  startLine: number;
+  endLine: number;
+}
+
 export interface GraphEdge {
   id: string;
   source: string;
@@ -97,6 +104,9 @@ export interface GraphEdge {
   label: string;
   expand?: boolean;
   skeleton?: boolean;
+  metadata?: {
+    evidence: EdgeEvidence;
+  };
 }
 
 export interface Flow {

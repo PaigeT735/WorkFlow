@@ -223,16 +223,21 @@ The prompt lists the selected node, connected nodes, `A -> B (label)` relationsh
 
 - An application node from `package.json` or the directory name
 - React Router `<Route path element>` and `component={Page}`, route objects, Next.js `app/` and `pages/` files, and `pages/*.tsx`
+- `connect(...)(Component)` and `export default connect(...)(Component)`, so the page source is the component, not the `<Route>`
+- One page when the same component is registered on more than one route. The other paths are listed in the page detail. A component whose render output is only `Route` / `Routes` / `Switch` is treated as a layout shell and is not a second page
 - Components a page actually renders
 - Button and form actions (`onClick`, `onSubmit`) with a readable label
-- `fetch`, axios-style calls, and other client calls whose first argument is a path
-- Express and Fastify `method(path, ...handlers)`, including one `router` mount prefix, and Next.js route files
-- `requireAuth`-style middleware on those routes
-- `SomethingService.method()` calls from the handler
+- `fetch`, axios-style calls, `api.post("/path")`, and `requests.get("/path")` when a button, a page body, or a function those call actually reaches them. Imports are followed, including `agent.Articles.all()` when `Articles` is a property of the imported object. A client `.get("/path")` is not recorded as a backend route
+- Express and Fastify `method(path, ...handlers)` only when the receiver is `express()`, `fastify()`, or `Router()`, including mounts across files and chains such as `Router().use("/api", api)`. Next.js route files are included. Paths with no proven mount stay as written
+- `requireAuth`-style middleware, and `auth.required` / `auth.optional` when the object is named `auth` or comes from an `auth` module
+- `SomethingService.method()`, `Repository`, `Repo`, and `Dao` calls, plus any other called method whose body contains SQL or a Prisma-style query
+- Calls from a route handler into a function that itself queries, so `createUser()` can connect to the table it writes
 - PostgreSQL (`pg`), Prisma, Drizzle, Sequelize, TypeORM, MongoDB, MySQL, SQLite, and Supabase, with a table only when a SQL string, Prisma model, or similar call names it
 - Stripe, OpenAI, S3, GitHub, Resend, Firebase, Clerk, NextAuth, and SendGrid from imports or env var **names**
 
-Every kept node that comes from a syntax node has a file and line range. A file that does not parse is skipped.
+Every edge has `metadata.evidence` with the file and line that justify it. Node ids are a stable hash of type, label, and source span, so analyzing the same tree twice produces the same ids. A file that does not parse is skipped.
+
+Not detected, on purpose: relationships inferred from similar names, Redux `store.dispatch` as a database, runtime counts, and routes whose path is built only by string concatenation the analyzer cannot see. A layout that also contains a nested `<Route>` is omitted as a page.
 
 ## Fixture
 

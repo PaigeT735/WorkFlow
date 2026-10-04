@@ -48,6 +48,7 @@ export async function scanRepository(root: string): Promise<ScanResult> {
   async function walk(dir: string): Promise<void> {
     if (stopped) return;
     const entries = await readdir(dir, { withFileTypes: true });
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const entry of entries) {
       if (stopped) return;
       if (entry.name.startsWith(".git")) continue;
