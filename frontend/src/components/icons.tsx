@@ -241,3 +241,16 @@ export const RouteIcon = (props: IconProps) => (
     <path d="M4 5.5v2.25a2 2 0 0 0 2 2h4a2 2 0 0 1 2 2v-1" />
   </Svg>
 );
+
+export const SunIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="8" cy="8" r="2.75" />
+    <path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05" />
+  </Svg>
+);
+
+export const MoonIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M13.25 9.6A5.5 5.5 0 0 1 6.4 2.75a5.5 5.5 0 1 0 6.85 6.85Z" />
+  </Svg>
+);

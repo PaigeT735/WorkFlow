@@ -1,6 +1,7 @@
 import { useMap } from "../state/mapStore.tsx";
 import { ExternalLinkIcon, LogoMark, TypeIcon } from "./icons.tsx";
 import { Search } from "./Search.tsx";
+import { ThemeToggle } from "./ThemeToggle.tsx";
 
 /** Level 1: which application this map is of, and where it came from. */
 export function TopBar() {
@@ -58,6 +59,7 @@ export function TopBar() {
             {summary.filesSkipped > 0 ? <span className="tb-warn"> · {summary.filesSkipped} skipped</span> : null}
           </span>
         ) : null}
+        <ThemeToggle />
         <button type="button" className="btn btn-small" onClick={map.startOver} data-testid="new-analysis">
           New analysis
         </button>

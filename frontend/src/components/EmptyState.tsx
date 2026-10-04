@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ThemeToggle } from "./ThemeToggle.tsx";
 import { useMap } from "../state/mapStore.tsx";
 import { ArrowRightIcon, LogoMark, TypeIcon } from "./icons.tsx";
 
@@ -22,6 +23,7 @@ export function EmptyState() {
 
   return (
     <main className="landing">
+      <ThemeToggle className="corner-toggle" />
       <div className="landing-inner">
         <div className="landing-brand">
           <LogoMark size={22} />

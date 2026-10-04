@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GraphIndex } from "../graph/indexGraph.ts";
 import type { NodeType } from "../graph/types.ts";
+import { ThemeToggle } from "./ThemeToggle.tsx";
 import { useMap, type LoadedProject } from "../state/mapStore.tsx";
 import { ArrowRightIcon, CheckIcon, LogoMark } from "./icons.tsx";
 
@@ -28,6 +29,7 @@ export function AnalysisLoading() {
 
   return (
     <main className="analysis" aria-live="polite">
+      <ThemeToggle className="corner-toggle" />
       <div className="analysis-inner">
         <div className="landing-brand">
           <LogoMark size={20} />

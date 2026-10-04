@@ -13,6 +13,7 @@ import type { Highlight } from "../graph/path.ts";
 import { containerOf } from "../graph/visibility.ts";
 import { absolutePosition, layoutLanes, type LayoutResult, type PositionedNode } from "../layout/laneLayout.ts";
 import { useMap } from "../state/mapStore.tsx";
+import { useTheme, type Theme } from "../state/theme.ts";
 import { MapEdge, type EdgeState, type MapEdgeData } from "./MapEdge.tsx";
 import {
   CardNode,
@@ -33,13 +34,24 @@ export const INSPECTOR_WIDTH = 392;
 /** Lane bands run well past the content so they read as full-width swimlanes. */
 const LANE_BLEED = 4000;
 
-const EDGE_COLOR: Record<EdgeState, string> = {
-  idle: "#4b5361",
-  path: "#7aa7ff",
-  pending: "#353c48",
-  dim: "#262b33",
-  near: "#9aa4b2",
-  quiet: "#2d333c",
+/** Arrowhead colours; the strokes themselves come from index.css. Keep the two in step. */
+const EDGE_COLOR: Record<Theme, Record<EdgeState, string>> = {
+  dark: {
+    idle: "#4b5361",
+    path: "#7aa7ff",
+    pending: "#353c48",
+    dim: "#262b33",
+    near: "#9aa4b2",
+    quiet: "#2d333c",
+  },
+  light: {
+    idle: "#aab2bd",
+    path: "#2f6bdf",
+    pending: "#d3d8de",
+    dim: "#e2e5e9",
+    near: "#59626e",
+    quiet: "#dadee3",
+  },
 };
 
 interface Model {
@@ -55,11 +67,12 @@ export function ApplicationMap() {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const model = useLayout(map.index, map.visible);
   const zoom = useStore((state) => state.transform[2]);
+  const { theme } = useTheme();
 
   const elements = useMemo(() => {
     if (!map.index || !model) return { nodes: [] as Node[], edges: [] as Edge<MapEdgeData>[] };
-    return toElements(map, model, hoverId);
-  }, [map, model, hoverId]);
+    return toElements(map, model, hoverId, theme);
+  }, [map, model, hoverId, theme]);
 
   const panelOpen = Boolean(map.focusId || map.flowId);
   const cameraRef = useRef({ panelOpen, sourceOpen: map.sourceOpen, flows: (map.index?.flows.length ?? 0) > 0 });
@@ -156,7 +169,7 @@ export function ApplicationMap() {
         deleteKeyCode={null}
         multiSelectionKeyCode={null}
         attributionPosition="bottom-left"
-        colorMode="dark"
+        colorMode={theme}
       />
     </div>
   );
@@ -379,6 +392,7 @@ function toElements(
   map: ReturnType<typeof useMap>,
   model: Model,
   hoverId: string | null,
+  theme: Theme,
 ): { nodes: Node[]; edges: Edge<MapEdgeData>[] } {
   const index = map.index;
   if (!index) return { nodes: [], edges: [] };
@@ -462,7 +476,7 @@ function toElements(
     const b = absolutePosition(model.positions, edge.target);
     if (!a || !b) continue;
     const state = emphasis.edges.get(edge.id) ?? "idle";
-    const color = EDGE_COLOR[state];
+    const color = EDGE_COLOR[theme][state];
     flowEdges.push({
       id: edge.id,
       source: edge.source,
