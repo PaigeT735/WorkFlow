@@ -116,7 +116,7 @@ export async function scanRepository(root: string): Promise<ScanResult> {
           text,
           ts.ScriptTarget.Latest,
           true,
-          scriptKind(ext),
+          scriptKind(ext, text),
         );
         const diagnostics =
           (source as { parseDiagnostics?: readonly ts.Diagnostic[] }).parseDiagnostics ?? [];
@@ -137,9 +137,12 @@ export async function scanRepository(root: string): Promise<ScanResult> {
   return { files, warnings };
 }
 
-function scriptKind(ext: string): ts.ScriptKind {
+function scriptKind(ext: string, text: string): ts.ScriptKind {
   if (ext === ".tsx") return ts.ScriptKind.TSX;
   if (ext === ".jsx") return ts.ScriptKind.JSX;
+  if ((ext === ".js" || ext === ".mjs" || ext === ".cjs") && /<\/|[A-Za-z0-9]\s*\/>/.test(text)) {
+    return ts.ScriptKind.JSX;
+  }
   if (ext === ".js" || ext === ".mjs" || ext === ".cjs") return ts.ScriptKind.JS;
   return ts.ScriptKind.TS;
 }

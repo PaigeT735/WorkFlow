@@ -213,7 +213,7 @@ The prompt lists the selected node, connected nodes, `A -> B (label)` relationsh
 `analyzeRepository(directory)` in `backend/src/analyzer.ts` walks the tree (skipping `node_modules`, build output, and secret files) and parses TypeScript and JavaScript with the TypeScript compiler API. It records:
 
 - An application node from `package.json` or the directory name
-- React Router `<Route path element>` and route objects, Next.js `app/` and `pages/` files, and `pages/*.tsx`
+- React Router `<Route path element>` and `component={Page}`, route objects, Next.js `app/` and `pages/` files, and `pages/*.tsx`
 - Components a page actually renders
 - Button and form actions (`onClick`, `onSubmit`) with a readable label
 - `fetch`, axios-style calls, and other client calls whose first argument is a path

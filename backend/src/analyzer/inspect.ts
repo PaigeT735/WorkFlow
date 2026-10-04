@@ -222,6 +222,16 @@ function collectFunctions(file: FileInfo): void {
   const visit = (node: ts.Node): void => {
     if (ts.isFunctionDeclaration(node) && node.name) {
       addFunction(file, node, node.name.text, node.name.text, node.body, hasExport(node), Boolean(node.modifiers?.some((mod) => mod.kind === ts.SyntaxKind.DefaultKeyword)));
+    } else if (ts.isClassDeclaration(node) && node.name && containsJsx(node)) {
+      addFunction(
+        file,
+        node,
+        node.name.text,
+        node.name.text,
+        node,
+        hasExport(node),
+        Boolean(node.modifiers?.some((mod) => mod.kind === ts.SyntaxKind.DefaultKeyword)),
+      );
     } else if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
@@ -314,7 +324,7 @@ function routerPages(files: Map<string, FileInfo>): PageFact[] {
       if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
         if (tagText(node) === "Route") {
           const route = attrString(node, "path");
-          const element = attrExpression(node, "element");
+          const element = attrExpression(node, "element") ?? attrExpression(node, "component");
           if (route && element) {
             const fact = pageFromElement(file, files, route, element, spanOf(file.source, node));
             if (fact) pages.push(fact);
@@ -360,8 +370,13 @@ function pageFromElement(
   fallback: Span,
 ): PageFact | null {
   const fn = componentFromExpression(file, files, element);
-  if (fn && !fn.jsx && tagTextFromExpression(element) == null) return null;
-  const label = pageLabel(route, fn);
+  if (fn && !fn.jsx && tagTextFromExpression(element) == null && !ts.isIdentifier(element)) return null;
+  const named = expressionName(element);
+  const label = fn && fn.name !== "Page" && fn.name !== "default"
+    ? humanize(fn.name)
+    : named
+      ? humanize(named)
+      : pageLabel(route, null);
   return { route: normalizeRoute(route), label, fn, span: fn?.span ?? fallback };
 }
 
@@ -388,6 +403,11 @@ function componentFromExpression(file: FileInfo, files: Map<string, FileInfo>, e
     };
   }
   return null;
+}
+
+function expressionName(expression: ts.Expression): string | null {
+  if (ts.isIdentifier(expression)) return expression.text;
+  return tagTextFromExpression(expression);
 }
 
 function tagTextFromExpression(expression: ts.Expression): string | null {
@@ -1197,7 +1217,7 @@ function dedupePages(pages: PageFact[]): PageFact[] {
   const byRoute = new Map<string, PageFact>();
   for (const page of pages) {
     const route = normalizeRoute(page.route);
-    const key = route.toLowerCase();
+    const key = `${route.toLowerCase()}:${page.fn?.qualified ?? page.label}`;
     const existing = byRoute.get(key);
     if (!existing) {
       byRoute.set(key, { ...page, route });
