@@ -1180,6 +1180,7 @@ function assemble(input: AssembleInput): ApplicationGraph {
   const auths = new Map<string, GraphNode>();
   const files = new Map<string, GraphNode>();
   const flows: Flow[] = [];
+  const flowIds = new Set<string>();
   const apis = new Map<string, GraphNode>();
   const apiAttached = new Set<string>();
   const interactionApis = new Set<string>();
@@ -1268,9 +1269,15 @@ function assemble(input: AssembleInput): ApplicationGraph {
       flowEdges.push(callEdge, ...ensured.edges);
     }
 
-    if (flowNodes.length >= 2) {
+    // Same label on the same page (two "Add to cart" buttons) must still get distinct
+    // ids, so the id includes where the interaction is defined. A repeat is skipped.
+    const flowId = builder.flowId(
+      `flow-${interaction.pageRoute}-${slug(interaction.label)}@${interaction.span.file}:${interaction.span.startLine}-${interaction.span.endLine}`,
+    );
+    if (flowNodes.length >= 2 && !flowIds.has(flowId)) {
+      flowIds.add(flowId);
       flows.push({
-        id: builder.flowId(`flow-${interaction.pageRoute}-${slug(interaction.label)}`),
+        id: flowId,
         label: interaction.label,
         description: `${interaction.label} on ${page.label}.`,
         nodeIds: uniqueIds(flowNodes),
