@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../App";
-import { api, formatDuration, formatClock, getGreeting } from "../api";
-import { Raccoon } from "../components/Raccoon";
+import { api, formatDuration, getGreeting } from "../api";
+import { FocusOrb } from "../components/FocusOrb";
 import { StartFocusModal } from "../components/StartFocusModal";
-import { StarRow, StatCard } from "../components/StatsCards";
-import type { RaccoonState, Session, Stats } from "../types";
+import { StreakRow } from "../components/StatsCards";
+import type { Session, Stats } from "../types";
 
 export function Home() {
   const { preferences, activeSession } = useApp();
@@ -28,57 +28,80 @@ export function Home() {
   }, [activeSession]);
 
   const todayTotal = stats?.todayTotal ?? 0;
-  const raccoonState: RaccoonState = todayTotal === 0 ? "sleepy" : todayTotal < 30 * 60_000 ? "happy" : "sparkly";
-  const raccoonMessage =
-    todayTotal === 0 ? "we could study a little? ♡" :
-    todayTotal < 30 * 60_000 ? "nice start! ♡" :
-    todayTotal < 60 * 60_000 ? "you're doing great ♡" :
-    "look at you go! ♡";
+
+  // Count streak days
+  const streak = (() => {
+    if (!stats?.dailyTotals) return 0;
+    let count = 0;
+    for (let i = stats.dailyTotals.length - 1; i >= 0; i--) {
+      if (stats.dailyTotals[i].total > 0) count++;
+      else break;
+    }
+    return count;
+  })();
 
   return (
     <div className="page">
       <div className="home-hero">
-        <div className="clock">{formatClock(now, preferences?.timeFormat ?? "12h")}</div>
-        <div className="greeting">{getGreeting(now)}</div>
+        <div className="home-greeting">{getGreeting(now)}</div>
+        <div className="home-subtitle">Ready to focus?</div>
       </div>
 
-      <div className="home-grid">
-        <div className="home-left">
-          <div className="stats-grid">
-            <StatCard label="Today" value={formatDuration(stats?.todayTotal ?? 0)} />
-            <StatCard label="Daily avg" value={formatDuration(stats?.dailyAverage ?? 0)} />
-            <StatCard label="This week" value={formatDuration(stats?.weekTotal ?? 0)} />
-          </div>
-
-          {activeSession && activeSession.status !== "completed" ? (
-            <button className="start-btn continue-btn" onClick={() => navigate("/focus")}>
-              ◷ Continue Focus
-            </button>
-          ) : (
-            <button className="start-btn" onClick={() => setShowModal(true)}>
-              ✦ Start Focus
-            </button>
-          )}
-
-          {stats && (
-            <>
-              <div className="section-header">
-                <span className="section-title">This week</span>
-                <Link to="/history" className="section-link">View study history →</Link>
-              </div>
-              <StarRow dailyTotals={stats.dailyTotals} />
-            </>
-          )}
+      {/* Stats — quiet typography */}
+      <div className="home-stats">
+        <div className="home-stat">
+          <div className="home-stat-label">Today</div>
+          <div className="home-stat-value">{formatDuration(todayTotal)}</div>
         </div>
-
-        <div className="home-right">
-          <div className="raccoon-area">
-            <Raccoon state={raccoonState} animated={preferences?.animationsEnabled ?? true} />
-            <div className="raccoon-message">{raccoonMessage}</div>
-          </div>
+        <div className="home-stat-divider" />
+        <div className="home-stat">
+          <div className="home-stat-label">This week</div>
+          <div className="home-stat-value">{formatDuration(stats?.weekTotal ?? 0)}</div>
+        </div>
+        <div className="home-stat-divider" />
+        <div className="home-stat">
+          <div className="home-stat-label">Streak</div>
+          <div className="home-stat-value">{streak} {streak === 1 ? "day" : "days"}</div>
         </div>
       </div>
 
+      {/* Focus Orb */}
+      <div className="orb-wrapper">
+        {activeSession && activeSession.status !== "completed" ? (
+          <FocusOrb
+            idle
+            size="normal"
+            animated={preferences?.animationsEnabled ?? true}
+            onClick={() => navigate("/focus")}
+          />
+        ) : (
+          <FocusOrb
+            idle
+            size="normal"
+            animated={preferences?.animationsEnabled ?? true}
+            onClick={() => setShowModal(true)}
+          />
+        )}
+      </div>
+
+      {/* Streak */}
+      {streak > 0 && (
+        <div className="home-streak">
+          <span className="sparkle">✦</span> {streak} day streak
+        </div>
+      )}
+
+      {/* Progress link */}
+      <div className="home-progress-link">
+        <Link to="/history">View progress →</Link>
+      </div>
+
+      {/* Weekly streak dots */}
+      {stats && (
+        <StreakRow dailyTotals={stats.dailyTotals} />
+      )}
+
+      {/* Today's sessions */}
       {recent.length > 0 && (
         <>
           <div className="section-header">

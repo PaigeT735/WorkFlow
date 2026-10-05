@@ -1,6 +1,5 @@
 import { useApp } from "../App";
 import { THEMES } from "../themes";
-import { formatDuration } from "../api";
 import type { Preferences } from "../types";
 
 const DURATIONS = [
@@ -21,7 +20,7 @@ export function Settings() {
     <div className="page">
       <div className="history-header">
         <div className="history-title">Settings</div>
-        <div className="history-subtitle">make it yours ♡</div>
+        <div className="history-subtitle">Make it yours ✦</div>
       </div>
 
       <div className="settings-section">
@@ -30,7 +29,7 @@ export function Settings() {
           {THEMES.map((t) => {
             const bg = t.vars["--bg"];
             const accent = t.vars["--accent"];
-            const surface = t.vars["--surface"];
+            const surface = t.vars["--surface-solid"];
             return (
               <div
                 key={t.id}
@@ -39,7 +38,7 @@ export function Settings() {
               >
                 <div
                   className="theme-preview"
-                  style={{ background: `linear-gradient(135deg, ${bg} 0%, ${surface} 50%, ${accent} 100%)` }}
+                  style={{ background: `linear-gradient(135deg, ${bg} 0%, ${surface} 40%, ${accent} 100%)` }}
                 />
                 <div className="theme-name">{t.name}</div>
               </div>
@@ -93,7 +92,7 @@ export function Settings() {
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">Raccoon animations</div>
+        <div className="settings-section-title">Animations</div>
         <div className="settings-row">
           <span className="settings-label">Show animations</span>
           <button

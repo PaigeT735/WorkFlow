@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../App";
 import { api, formatDuration } from "../api";
-import { Raccoon } from "../components/Raccoon";
 import { Calendar } from "../components/Calendar";
 import { DailyChart, WeeklyChart, SubjectChart } from "../components/Charts";
 import { StatCard } from "../components/StatsCards";
-import type { Stats, Session, RaccoonState } from "../types";
+import type { Stats, Session } from "../types";
 
 type Range = "today" | "week" | "lastWeek" | "month";
 
@@ -43,13 +42,6 @@ export function History() {
     api.getSessions(from, to).then(setSessions).catch(() => {});
   }, [range]);
 
-  const rangeTotal = stats?.rangeTotal ?? 0;
-  const raccoonState: RaccoonState = rangeTotal === 0 ? "sleepy" : rangeTotal < 60 * 60_000 ? "happy" : "sparkly";
-  const raccoonMessage =
-    rangeTotal === 0 ? "we can start again today ♡" :
-    rangeTotal < 2 * 60 * 60_000 ? "nice progress ♡" :
-    "look how much we studied ♡";
-
   // Group sessions by date
   const grouped: { date: string; sessions: Session[] }[] = [];
   const groupMap = new Map<string, Session[]>();
@@ -65,9 +57,10 @@ export function History() {
   return (
     <div className="page">
       <div className="history-header">
-        <Raccoon state={raccoonState} size="normal" animated={preferences?.animationsEnabled ?? true} />
-        <div className="history-title">Your study {range === "today" ? "day" : range === "month" ? "month" : "week"} ✦</div>
-        <div className="history-subtitle">{raccoonMessage}</div>
+        <div className="history-title">Your progress ✦</div>
+        <div className="history-subtitle">
+          {formatDuration(stats?.weekTotal ?? 0)} this week · {formatDuration(stats?.dailyAverage ?? 0)}/day average
+        </div>
       </div>
 
       <div className="range-tabs">
@@ -92,7 +85,7 @@ export function History() {
       </div>
 
       <div className="card">
-        <Calendar dailyTotals={stats?.dailyTotals ?? []} sessions={sessions} />
+        <Calendar dailyTotals={stats?.dailyTotals ?? []} sessions={sessions as { startTime: number; subject: string; endTime: number }[]} />
       </div>
 
       <div className="history-grid">
@@ -139,7 +132,7 @@ export function History() {
       {sessions.length === 0 && (
         <div className="empty-state">
           <div className="empty-state-icon">✦</div>
-          <div className="empty-state-text">no sessions yet — let's study ♡</div>
+          <div className="empty-state-text">Ready when you are ✦<br />Start your first focus session and your progress will appear here.</div>
         </div>
       )}
     </div>

@@ -20,5 +20,5 @@ docker compose -f docker-compose.base44.yml logs -f
 ## Key files
 - `backend/src/store.ts` — session lifecycle + time computation
 - `backend/src/stats.ts` — all statistics derivation
-- `frontend/src/components/Raccoon.tsx` — SVG raccoon with 5 states
-- `frontend/src/themes.ts` — theme definitions
+- `frontend/src/components/FocusOrb.tsx` — the purple Focus orb (glass + progress ring)
+- `frontend/src/themes.ts` — theme definitions (purple/lavender glass system)

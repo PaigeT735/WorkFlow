@@ -19,7 +19,7 @@ export function DailyChart({ dailyTotals }: { dailyTotals: DailyTotal[] }) {
           return (
             <div key={i} className="bar-col">
               {d.total > 0 && <span className="bar-value">{formatDuration(d.total)}</span>}
-              <div className={`bar ${d.total === 0 ? "empty" : ""}`} style={{ height: `${Math.max(heightPct, 2)}%` }} />
+              <div className={`bar ${d.total === 0 ? "empty" : ""}`} style={{ height: `${Math.max(heightPct, 3)}%` }} />
               <span className="bar-label">{labels[dow]}</span>
             </div>
           );
@@ -43,7 +43,7 @@ export function WeeklyChart({ weeklyTotals }: { weeklyTotals: WeeklyTotal[] }) {
           return (
             <div key={i} className="bar-col">
               {w.total > 0 && <span className="bar-value">{formatDuration(w.total)}</span>}
-              <div className={`bar ${w.total === 0 ? "empty" : ""}`} style={{ height: `${Math.max(heightPct, 2)}%` }} />
+              <div className={`bar ${w.total === 0 ? "empty" : ""}`} style={{ height: `${Math.max(heightPct, 3)}%` }} />
               <span className="bar-label">{date.getMonth() + 1}/{date.getDate()}</span>
             </div>
           );
@@ -61,7 +61,7 @@ export function SubjectChart({ subjectTotals }: { subjectTotals: SubjectTotal[] 
       <div className="chart-section">
         <div className="chart-title">Subject breakdown</div>
         <div className="empty-state">
-          <div className="empty-state-text">No sessions yet ♡</div>
+          <div className="empty-state-text">Ready when you are ✦</div>
         </div>
       </div>
     );

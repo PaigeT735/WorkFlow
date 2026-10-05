@@ -13,7 +13,7 @@ interface Props {
   sessions: { startTime: number; subject: string; endTime: number }[];
 }
 
-const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DOW = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function parseDate(key: string): Date {
@@ -25,18 +25,19 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function starForMs(ms: number): { icon: string; className: string } {
-  if (ms <= 0) return { icon: "", className: "" };
-  if (ms < 30 * 60_000) return { icon: "✦", className: "star-small" };
-  if (ms < 60 * 60_000) return { icon: "✦", className: "star-medium" };
-  if (ms < 120 * 60_000) return { icon: "★", className: "star-large" };
-  return { icon: "★", className: "star-glow" };
+function intensityForMs(ms: number): number {
+  if (ms <= 0) return 0;
+  if (ms < 30 * 60_000) return 1;
+  if (ms < 60 * 60_000) return 2;
+  if (ms < 120 * 60_000) return 3;
+  return 4;
 }
 
 export function Calendar({ dailyTotals, sessions }: Props) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [selectedDay, setSelectedDay] = useState<{ key: string; total: number; sessions: number; subjects: Map<string, number> } | null>(null);
 
   const dataMap = new Map(dailyTotals.map((d) => [d.date, d]));
 
@@ -72,6 +73,17 @@ export function Calendar({ dailyTotals, sessions }: Props) {
     else setViewMonth((m) => m + 1);
   }
 
+  function handleDayClick(cell: { day: number; key: string }) {
+    if (cell.day === 0) return;
+    const data = dataMap.get(cell.key);
+    const total = data?.total ?? 0;
+    const sess = data?.sessions ?? 0;
+    const subs = subjectByDay.get(cell.key) ?? new Map<string, number>();
+    setSelectedDay({ key: cell.key, total, sessions: sess, subjects: subs });
+  }
+
+  const selectedDate = selectedDay ? parseDate(selectedDay.key) : null;
+
   return (
     <div className="calendar">
       <div className="calendar-header">
@@ -80,38 +92,63 @@ export function Calendar({ dailyTotals, sessions }: Props) {
         <button className="calendar-nav-btn" onClick={nextMonth}>›</button>
       </div>
       <div className="calendar-grid">
-        {DOW.map((d) => (
-          <div key={d} className="calendar-dow">{d}</div>
+        {DOW.map((d, i) => (
+          <div key={i} className="calendar-dow">{d}</div>
         ))}
         {cells.map((cell, i) => {
           if (cell.day === 0) return <div key={i} className="calendar-day empty" />;
           const data = dataMap.get(cell.key);
           const total = data?.total ?? 0;
-          const star = starForMs(total);
+          const intensity = intensityForMs(total);
           const isToday = cell.key === todayKey;
           const subs = subjectByDay.get(cell.key);
           return (
-            <div key={i} className={`calendar-day ${isToday ? "today" : ""}`}>
+            <div
+              key={i}
+              className={`calendar-day intensity-${intensity} ${isToday ? "today" : ""}`}
+              onClick={() => handleDayClick(cell)}
+            >
               <span className="calendar-day-num">{cell.day}</span>
-              {star.icon && (
-                <span className="calendar-star" style={{
-                  color: total >= 120 * 60_000 ? "var(--star-glow)" : "var(--star)",
-                  fontSize: total >= 120 * 60_000 ? "1rem" : total >= 60 * 60_000 ? "0.85rem" : "0.7rem",
-                }}>{star.icon}</span>
-              )}
-              {total > 0 && subs && (
+              {total > 0 && (
                 <div className="calendar-day-tooltip">
-                  <div style={{ fontWeight: 700 }}>{formatDuration(total)} studied</div>
+                  <div style={{ fontWeight: 600 }}>{formatDuration(total)} focused</div>
                   <div style={{ color: "var(--text-muted)" }}>{data?.sessions ?? 0} session{(data?.sessions ?? 0) !== 1 ? "s" : ""}</div>
-                  {[...subs.entries()].map(([sub, t]) => (
-                    <div key={sub} style={{ color: "var(--text-muted)" }}>{sub}: {formatDuration(t)}</div>
-                  ))}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Day detail sheet */}
+      {selectedDay && selectedDate && (
+        <div className="day-detail-sheet" onClick={() => setSelectedDay(null)}>
+          <div className="day-detail-content" onClick={(e) => e.stopPropagation()}>
+            <div className="day-detail-title">
+              {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </div>
+            {selectedDay.total > 0 ? (
+              <>
+                <div className="day-detail-total">{formatDuration(selectedDay.total)} focused</div>
+                <div className="day-detail-count">{selectedDay.sessions} session{selectedDay.sessions !== 1 ? "s" : ""}</div>
+                {[...selectedDay.subjects.entries()].length > 0 && (
+                  <div>
+                    {[...selectedDay.subjects.entries()].map(([sub, t]) => (
+                      <div key={sub} className="day-detail-row">
+                        <span className="day-detail-row-label">{sub}</span>
+                        <span className="day-detail-row-value">{formatDuration(t)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="day-detail-count">No sessions this day</div>
+            )}
+            <button className="day-detail-close" onClick={() => setSelectedDay(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

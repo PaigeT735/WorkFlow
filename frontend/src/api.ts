@@ -111,9 +111,9 @@ export function formatClock(date: Date, fmt: "12h" | "24h"): string {
 
 export function getGreeting(date: Date): string {
   const h = date.getHours();
-  if (h < 5) return "Still up? ♡";
-  if (h < 12) return "Good morning ♡";
-  if (h < 17) return "Good afternoon ♡";
-  if (h < 21) return "Good evening ♡";
-  return "Good night ♡";
+  if (h < 5) return "Still up?";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  if (h < 21) return "Good evening";
+  return "Good night";
 }

@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../App";
-import { api, computeRemaining, computeElapsed, formatTimer, formatDuration } from "../api";
-import { Raccoon } from "../components/Raccoon";
+import { api, computeRemaining, computeElapsed, formatTimer } from "../api";
+import { FocusOrb } from "../components/FocusOrb";
 import { SessionComplete } from "../components/SessionComplete";
-import type { RaccoonState } from "../types";
 
 export function Focus() {
   const { activeSession, refreshActive, preferences } = useApp();
@@ -47,9 +46,14 @@ export function Focus() {
   if (!activeSession || (activeSession.status !== "active" && activeSession.status !== "paused")) {
     return (
       <div className="focus-screen page">
-        <Raccoon state="sleepy" animated={preferences?.animationsEnabled ?? true} />
-        <div className="raccoon-message">no active session ♡</div>
-        <button className="start-btn" onClick={() => navigate("/")}>✦ Start Focus</button>
+        <FocusOrb
+          idle
+          size="normal"
+          animated={preferences?.animationsEnabled ?? true}
+          onClick={() => navigate("/")}
+        />
+        <div className="focus-paused-hint">No active session</div>
+        <button className="focus-btn primary" onClick={() => navigate("/")}>Start Focus</button>
       </div>
     );
   }
@@ -60,12 +64,11 @@ export function Focus() {
   const isPaused = s.status === "paused";
   const isOpen = s.plannedDuration === null;
 
-  // Raccoon state based on elapsed time
-  let raccoonState: RaccoonState = "focused";
-  if (elapsed >= 60 * 60_000) raccoonState = "sparkly";
-  else if (elapsed >= 30 * 60_000) raccoonState = "happy";
+  // Progress for ring (0 to 1)
+  const progress = isOpen ? null : (s.plannedDuration! > 0 ? elapsed / s.plannedDuration! : 0);
 
   const displayMs = isOpen ? elapsed : (remaining ?? 0);
+  const timerStr = formatTimer(displayMs);
 
   async function handlePauseResume() {
     if (s.status === "active") await api.pauseSession(s.id);
@@ -88,31 +91,32 @@ export function Focus() {
 
   return (
     <div className="focus-screen page">
-      <div className="focus-subject">{s.subject}</div>
-      <div className="focus-mode-tag">{isOpen ? "Open Focus" : "Deep Focus"}</div>
-
-      <div className={`focus-timer ${isPaused ? "paused" : ""} ${isOpen ? "open-ended" : ""}`}>
-        {isOpen ? formatTimer(elapsed) : formatTimer(displayMs)}
+      <div className="focus-context">
+        <div className="focus-subject">{s.subject}</div>
+        <div className="focus-mode-tag">{isOpen ? "Open Focus" : "Deep Focus"}</div>
       </div>
 
-      <Raccoon state={raccoonState} animated={preferences?.animationsEnabled ?? true} />
+      <FocusOrb
+        timer={timerStr}
+        paused={isPaused}
+        progress={progress}
+        size="large"
+        animated={preferences?.animationsEnabled ?? true}
+        sparkles={!isPaused && elapsed > 30 * 60_000}
+      />
 
       <div className="focus-controls">
-        <button className="focus-btn primary" onClick={handlePauseResume}>
+        <button className="focus-btn glass-btn" onClick={handlePauseResume}>
           {isPaused ? "Resume" : "Pause"}
         </button>
-        <button className="focus-btn secondary" onClick={handleFinish}>
-          Finish Session
+        <button className="focus-btn primary" onClick={handleFinish}>
+          Finish
         </button>
-        <button className="focus-btn danger" onClick={handleCancel}>
-          Cancel
-        </button>
+        <button className="focus-btn end-btn" onClick={handleCancel}>End</button>
       </div>
 
       {isPaused && (
-        <div style={{ color: "var(--text-subtle)", fontFamily: "var(--font-hand)", fontSize: "1.2rem", marginTop: 4 }}>
-          paused ♡ take your time
-        </div>
+        <div className="focus-paused-hint">paused — take your time</div>
       )}
     </div>
   );

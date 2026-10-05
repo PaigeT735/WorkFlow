@@ -48,7 +48,7 @@ export function StartFocusModal({ onClose }: Props) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>What are you studying?</h2>
-        <p className="modal-sub">Let's study together ♡</p>
+        <p className="modal-sub">Choose your focus ✦</p>
 
         <div className="modal-section">
           <div className="modal-section-label">Subject</div>
