@@ -1,0 +1,48 @@
+services:
+  backend:
+    image: node:22-bookworm
+    working_dir: /app/backend
+    volumes:
+      - ./:/app
+      - backend_deps:/app/backend/node_modules
+      - study_data:/app/backend/data
+    command: ["sh", "-ec", "npm install && exec npx tsx watch src/server.ts"]
+    environment:
+      - PORT=4000
+      - DATA_DIR=/app/backend/data
+    ports:
+      - "4000:4000"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  frontend:
+    image: node:22-bookworm
+    working_dir: /app/frontend
+    volumes:
+      - ./:/app
+      - frontend_deps:/app/frontend/node_modules
+    command: ["sh", "-ec", "npm install && exec npx vite --host 0.0.0.0 --port 3000"]
+    environment:
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 25s
+
+volumes:
+  backend_deps:
+  frontend_deps:
+  study_data:
